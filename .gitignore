@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Android
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+android/build/
+
+
+# Android specific - these are usually in subdirs but good to have
+android/app/build/
+android/.gradle/
+
+# JetBrains
+.idea/
+
+# VS Code
+.vscode/
+
+# Project specific
+uploads/
+parser_debug.txt
+nota_teste.jpg
+backend/credentials.json
+*.hprof
+

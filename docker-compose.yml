@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: divup-api-dev
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=development
+      - UPLOAD_DIR=/app/uploads
+      - LOG_LEVEL=DEBUG
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    volumes:
+      - ./backend/app:/app/app:ro  # Hot reload
+      - ./uploads:/app/uploads      # Persistir uploads
+      - ./backend/credentials.json:/app/credentials.json:ro # Credenciais Google
+    restart: unless-stopped
