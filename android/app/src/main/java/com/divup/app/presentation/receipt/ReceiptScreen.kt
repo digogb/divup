@@ -527,9 +527,19 @@ private fun BottomSummaryCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TipSelector(percentage: Double, onPercentageChange: (Double) -> Unit) {
-    var showCustomInput by remember { mutableStateOf(false) }
-    var customValue by remember { mutableStateOf("") }
+    var showCustomDialog by remember { mutableStateOf(false) }
     val isCustomSelected = percentage != 0.0 && percentage != 10.0
+    
+    if (showCustomDialog) {
+        CustomTipDialog(
+            initialValue = if (isCustomSelected) percentage else 0.0,
+            onDismiss = { showCustomDialog = false },
+            onConfirm = { 
+                onPercentageChange(it)
+                showCustomDialog = false
+            }
+        )
+    }
     
     Column {
         Text(
@@ -546,10 +556,7 @@ private fun TipSelector(percentage: Double, onPercentageChange: (Double) -> Unit
             // 0%
             FilterChip(
                 selected = percentage == 0.0,
-                onClick = { 
-                    showCustomInput = false
-                    onPercentageChange(0.0) 
-                },
+                onClick = { onPercentageChange(0.0) },
                 label = { 
                     Text(
                         "0%",
@@ -566,10 +573,7 @@ private fun TipSelector(percentage: Double, onPercentageChange: (Double) -> Unit
             // 10%
             FilterChip(
                 selected = percentage == 10.0,
-                onClick = { 
-                    showCustomInput = false
-                    onPercentageChange(10.0) 
-                },
+                onClick = { onPercentageChange(10.0) },
                 label = { 
                     Text(
                         "10%",
@@ -584,38 +588,71 @@ private fun TipSelector(percentage: Double, onPercentageChange: (Double) -> Unit
             )
             
             // Custom
-            if (showCustomInput || isCustomSelected) {
-                OutlinedTextField(
-                    value = if (isCustomSelected && customValue.isEmpty()) percentage.toInt().toString() else customValue,
-                    onValueChange = { value ->
-                        customValue = value.filter { it.isDigit() }
-                        customValue.toDoubleOrNull()?.let { onPercentageChange(it) }
-                    },
-                    modifier = Modifier
-                        .weight(1.5f)
-                        .height(48.dp),
-                    placeholder = { Text("%") },
-                    suffix = { Text("%") },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryPurple,
-                        cursorColor = PrimaryPurple
-                    ),
-                    shape = RoundedCornerShape(12.dp)
+            FilterChip(
+                selected = isCustomSelected,
+                onClick = { showCustomDialog = true },
+                label = { 
+                    Text(
+                        if (isCustomSelected) "${percentage.toInt()}%" else "Outro",
+                        fontWeight = if (isCustomSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = PrimaryPurple,
+                    selectedLabelColor = Color.White
                 )
-            } else {
-                FilterChip(
-                    selected = false,
-                    onClick = { showCustomInput = true },
-                    label = { 
-                        Text("Outro")
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            )
         }
     }
+}
+
+@Composable
+private fun CustomTipDialog(
+    initialValue: Double,
+    onDismiss: () -> Unit,
+    onConfirm: (Double) -> Unit
+) {
+    var text by remember { mutableStateOf(if (initialValue > 0) initialValue.toInt().toString() else "") }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Gorjeta Personalizada") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { input -> 
+                    // Aceita apenas números
+                    if (input.all { it.isDigit() } && input.length <= 3) {
+                        text = input
+                    }
+                },
+                label = { Text("Porcentagem (%)") },
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                ),
+                shape = RoundedCornerShape(12.dp)
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val value = text.toDoubleOrNull() ?: 0.0
+                    onConfirm(value)
+                }
+            ) {
+                Text("OK", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp)
+    )
 }
 
 @Composable
