@@ -2,7 +2,7 @@ import os
 from google import genai
 
 # Defina sua chave aqui ou garanta que a variável de ambiente esteja setada
-api_key = os.environ.get("GOOGLE_API_KEY", "AIzaSyAiqENDzqJ6nN7N4rEttFOn-sQ6PNV8_Do")
+api_key = os.environ.get("GOOGLE_API_KEY")
 
 client = genai.Client(api_key=api_key)
 
