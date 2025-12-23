@@ -1,0 +1,27 @@
+### Health Check
+GET http://localhost:8001/
+Accept: application/json
+
+### Process Receipt (Localhost)
+# Certifique-se de ajustar o caminho da imagem de teste
+POST http://localhost:8001/api/v1/receipt/process
+Content-Type: multipart/form-data; boundary=boundary123
+
+--boundary123
+Content-Disposition: form-data; name="file"; filename="nota_teste.jpg"
+Content-Type: image/jpeg
+
+< ./nota_teste.jpg
+--boundary123--
+
+### Process Receipt (Production / OCI)
+# Substitua IP_DA_SUA_VM pelo IP real da sua máquina na Oracle
+POST http://IP_DA_SUA_VM:8001/api/v1/receipt/process
+Content-Type: multipart/form-data; boundary=boundary123
+
+--boundary123
+Content-Disposition: form-data; name="file"; filename="nota_teste.jpg"
+Content-Type: image/jpeg
+
+< ./nota_teste.jpg
+--boundary123--
