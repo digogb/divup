@@ -181,56 +181,57 @@ fun CameraScreen(
                 )
                 .padding(bottom = 48.dp, top = 32.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp)
             ) {
-                // Gallery Button
-                GalleryButton(
-                    onClick = {
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    }
-                )
+                // Gallery Button (Esquerda)
+                Box(modifier = Modifier.align(Alignment.CenterStart)) {
+                    GalleryButton(
+                        onClick = {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }
+                    )
+                }
                 
-                // Camera Capture Button
-                CaptureButton(
-                    isCapturing = isCapturing,
-                    onClick = {
-                        if (isCapturing) return@CaptureButton
-                        isCapturing = true
-                        
-                        val photoFile = File(context.cacheDir, "receipt_${System.currentTimeMillis()}.jpg")
-                        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-                        
-                        try {
-                            imageCapture?.takePicture(
-                                outputOptions,
-                                cameraExecutor,
-                                object : ImageCapture.OnImageSavedCallback {
-                                    override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                                        ContextCompat.getMainExecutor(context).execute {
+                // Camera Capture Button (Centro Absoluto)
+                Box(modifier = Modifier.align(Alignment.Center)) {
+                    CaptureButton(
+                        isCapturing = isCapturing,
+                        onClick = {
+                            if (isCapturing) return@CaptureButton
+                            isCapturing = true
+                            
+                            val photoFile = File(context.cacheDir, "receipt_${System.currentTimeMillis()}.jpg")
+                            val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+                            
+                            try {
+                                imageCapture?.takePicture(
+                                    outputOptions,
+                                    cameraExecutor,
+                                    object : ImageCapture.OnImageSavedCallback {
+                                        override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                            ContextCompat.getMainExecutor(context).execute {
+                                                isCapturing = false
+                                                onImageCaptured(photoFile)
+                                            }
+                                        }
+                                        override fun onError(exception: ImageCaptureException) {
                                             isCapturing = false
-                                            onImageCaptured(photoFile)
+                                            exception.printStackTrace()
                                         }
                                     }
-                                    override fun onError(exception: ImageCaptureException) {
-                                        isCapturing = false
-                                        exception.printStackTrace()
-                                    }
-                                }
-                            )
-                        } catch (e: Exception) {
-                            isCapturing = false
-                            e.printStackTrace()
+                                )
+                            } catch (e: Exception) {
+                                isCapturing = false
+                                e.printStackTrace()
+                            }
                         }
-                    }
-                )
-                
-                // Placeholder para balancear o layout
-                Spacer(modifier = Modifier.size(56.dp))
+                    )
+                }
             }
         }
     }
