@@ -1,0 +1,40 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+  <!-- Background Gradient -->
+  <path android:pathData="M32,32h448v448h-448z">
+    <aapt:attr name="android:fillColor">
+      <gradient android:startX="0" android:startY="0" android:endX="512" android:endY="512" android:type="linear">
+        <item android:offset="0.0" android:color="#FF6366F1"/> <!-- Indigo -->
+        <item android:offset="0.5" android:color="#FF8B5CF6"/> <!-- Violet -->
+        <item android:offset="1.0" android:color="#FFEC4899"/> <!-- Pink -->
+      </gradient>
+    </aapt:attr>
+  </path>
+
+  <!-- Receipt Shape -->
+  <path
+      android:fillColor="#F2FFFFFF"
+      android:pathData="M156,120 H356 C378.09,120 396,137.91 396,160 V392 L356,360 L316,392 L276,360 L236,392 L196,360 L156,392 V160 C156,137.91 173.91,120 196,120 Z"/>
+
+  <!-- Division Symbol / Slash -->
+  <path
+      android:strokeColor="#FFEC4899"
+      android:strokeWidth="24"
+      android:strokeLineCap="round"
+      android:pathData="M320,180 L190,330"/>
+
+  <!-- Dots -->
+  <path
+      android:fillColor="#FF6366F1"
+      android:pathData="M210,200 m-14,0 a14,14 0 1,1 28,0 a14,14 0 1,1 -28,0"/>
+  
+  <path
+      android:fillColor="#FF6366F1"
+      android:pathData="M300,310 m-14,0 a14,14 0 1,1 28,0 a14,14 0 1,1 -28,0"/>
+    
+</vector>
