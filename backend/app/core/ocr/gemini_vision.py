@@ -31,13 +31,17 @@ class GeminiVisionExtractor:
         
         # Criar prompt estruturado
         prompt = """
-Analise esta nota fiscal e extraia TODOS os itens em formato JSON.
+Analise esta nota fiscal e extraia os itens, o nome do estabelecimento e a data.
 
 Para cada item, retorne:
 - name: Nome completo do item (junte linhas fragmentadas)
 - quantity: Quantidade (número inteiro)
 - unit_price: Preço unitário (número decimal)
 - total_price: Preço total (número decimal)
+
+Também extraia:
+- establishment_name: Nome do restaurante/mercado (topo da nota)
+- date: Data da compra (formato DD/MM/AAAA)
 
 IMPORTANTE:
 - Junte nomes fragmentados em múltiplas linhas (ex: "CLASSIC" + "BURGUER" = "CLASSIC BURGUER")
@@ -47,6 +51,8 @@ IMPORTANTE:
 
 Retorne APENAS um JSON válido no formato:
 {
+  "establishment_name": "Nome do Local",
+  "date": "23/12/2025",
   "items": [
     {
       "name": "NOME DO ITEM",
@@ -106,14 +112,17 @@ Retorne APENAS um JSON válido no formato:
             )
             items.append(item)
         
-        print(f"✅ Gemini extraiu {len(items)} itens da nota.")
-        for idx, item in enumerate(items, 1):
-            print(f"  ➕ Item {idx}: {item.name[:40]} - {item.quantity}x R${item.unit_price:.2f} = R${item.total_price:.2f}")
+        est_name = data.get("establishment_name", "Estabelecimento Desconhecido")
+        date_str = data.get("date", "")
+
+        print(f"✅ Gemini extraiu {len(items)} itens da nota de '{est_name}' ({date_str}).")
         
         return ReceiptData(
             raw_text=response_text,
             items=items,
             subtotal=data.get("subtotal", sum(i.total_price for i in items)),
             total=data.get("total", sum(i.total_price for i in items)),
-            confidence_score=0.98
+            confidence_score=0.98,
+            establishment_name=est_name,
+            date=date_str
         )

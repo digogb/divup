@@ -17,6 +17,8 @@ class ReceiptData(BaseModel):
     subtotal: float
     total: float
     confidence_score: float = 0.0
+    establishment_name: Optional[str] = None
+    date: Optional[str] = None
 
 class ProcessReceiptResponse(BaseModel):
     success: bool

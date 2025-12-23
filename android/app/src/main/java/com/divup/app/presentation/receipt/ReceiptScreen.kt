@@ -14,7 +14,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Circle
+import android.content.Context
+import android.content.Intent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -126,7 +129,23 @@ private fun SuccessScreen(
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.Transparent
-                )
+                ),
+                actions = {
+                    val context = LocalContext.current
+                    val hasSelection = remember(state.receipt.items) { state.receipt.items.any { it.isSelected } }
+                    
+                    if (hasSelection) {
+                        IconButton(onClick = {
+                            shareReceipt(context, state.receipt.items, state.billSplit)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Compartilhar Resumo",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
             )
         },
         bottomBar = {
