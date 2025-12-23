@@ -24,11 +24,13 @@ android {
     
     buildTypes {
         debug {
-            // IP do PC na rede local (celular físico precisa estar na mesma Wi-Fi)
-            buildConfigField("String", "API_URL", "\"http://192.168.15.3:8001/\"")
+            // IP de Produção na Oracle Cloud
+            buildConfigField("String", "API_URL", "\"http://164.152.197.117:8001/\"")
         }
+
         release {
-            buildConfigField("String", "API_URL", "\"http://10.0.2.2:8001/\"")
+            buildConfigField("String", "API_URL", "\"http://164.152.197.117:8001/\"")
+
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
