@@ -136,7 +136,7 @@ private fun SuccessScreen(
                     
                     if (hasSelection) {
                         IconButton(onClick = {
-                            shareReceipt(context, state.receipt.items, state.billSplit)
+                            shareReceipt(context, state.receipt.items, state.billSplit, state.receipt.establishmentName, state.receipt.date)
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Share,
@@ -164,6 +164,16 @@ private fun SuccessScreen(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Cabeçalho da Nota (Nome do Restaurante e Data)
+            if (!state.receipt.establishmentName.isNullOrBlank() || !state.receipt.date.isNullOrBlank()) {
+                item {
+                    ReceiptHeaderCard(
+                        establishment = state.receipt.establishmentName ?: "Estabelecimento",
+                        date = state.receipt.date ?: ""
+                    )
+                }
+            }
+            
             // Botões de seleção
             item {
                 SelectionButtons(
@@ -783,4 +793,110 @@ private fun ErrorScreen(
             )
         }
     }
+}
+
+@Composable
+private fun ReceiptHeaderCard(
+    establishment: String,
+    date: String
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Ícone de loja/restaurante
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = PrimaryPurple.copy(alpha = 0.1f),
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = establishment.firstOrNull()?.toString()?.uppercase() ?: "E",
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryPurple
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Column {
+                Text(
+                    text = establishment,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (date.isNotBlank()) {
+                    Text(
+                        text = date,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun shareReceipt(
+    context: Context, 
+    items: List<ReceiptItem>, 
+    billSplit: BillSplit,
+    establishment: String? = null,
+    date: String? = null
+) {
+    val selectedItems = items.filter { it.isSelected }
+    if (selectedItems.isEmpty()) return
+    
+    val sb = StringBuilder()
+    sb.append("🧾 *Resumo do DivUp*\n")
+    if (!establishment.isNullOrBlank()) {
+        sb.append("📍 $establishment\n")
+    }
+    if (!date.isNullOrBlank()) {
+        sb.append("📅 Data: $date\n")
+    }
+    sb.append("\n")
+    
+    sb.append("*Meus Itens:*\n")
+    selectedItems.forEach { item ->
+        val itemTotal = item.unitPrice * item.selectedQuantity
+        sb.append("▪️ ${item.name}")
+        if (item.selectedQuantity > 1) {
+            sb.append(" (${item.selectedQuantity}x)")
+        }
+        sb.append(": R$ ${String.format("%.2f", itemTotal)}\n")
+    }
+    
+    sb.append("\n")
+    sb.append("───────────────\n")
+    sb.append("Subtotal: R$ ${String.format("%.2f", billSplit.itemsSubtotal)}\n")
+    
+    if (billSplit.tipAmount > 0) {
+        sb.append("Gorjeta (${billSplit.tipPercentage.toInt()}%): R$ ${String.format("%.2f", billSplit.tipAmount)}\n")
+    }
+    
+    sb.append("───────────────\n")
+    sb.append("*TOTAL A PAGAR: R$ ${String.format("%.2f", billSplit.total)}* 💸\n")
+    sb.append("\nCalculado com DivUp app 🚀")
+    
+    val sendIntent: Intent = Intent().apply {
+        action = Intent.ACTION_SEND
+        putExtra(Intent.EXTRA_TEXT, sb.toString())
+        type = "text/plain"
+    }
+    
+    val shareIntent = Intent.createChooser(sendIntent, "Compartilhar resumo via")
+    context.startActivity(shareIntent)
 }

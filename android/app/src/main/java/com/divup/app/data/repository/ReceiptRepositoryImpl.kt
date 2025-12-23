@@ -46,7 +46,9 @@ class ReceiptRepositoryImpl @Inject constructor(
                             },
                             subtotal = dto.subtotal,
                             total = dto.total,
-                            confidenceScore = dto.confidence_score
+                            confidenceScore = dto.confidence_score,
+                            establishmentName = dto.establishment_name,
+                            date = dto.date
                         )
                         emit(Result.Success(receipt))
                     } else {

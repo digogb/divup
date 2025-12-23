@@ -28,7 +28,9 @@ data class ReceiptDto(
     val items: List<ReceiptItemDto>,
     val subtotal: Double,
     val total: Double,
-    val confidence_score: Float
+    val confidence_score: Float,
+    val establishment_name: String? = null,
+    val date: String? = null
 )
 
 data class ReceiptItemDto(

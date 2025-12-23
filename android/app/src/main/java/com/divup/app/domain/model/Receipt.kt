@@ -6,5 +6,7 @@ data class Receipt(
     val items: List<ReceiptItem>,
     val subtotal: Double,
     val total: Double,
-    val confidenceScore: Float
+    val confidenceScore: Float,
+    val establishmentName: String? = null,
+    val date: String? = null
 )
