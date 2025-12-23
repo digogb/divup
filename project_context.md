@@ -5,8 +5,9 @@
 O fluxo principal consiste em:
 1. O usuário tira uma foto da nota fiscal pelo App Android.
 2. A imagem é enviada para o Backend.
-3. O Backend utiliza IA Generativa (Google Gemini Vision) para transcrever e estruturar os itens da nota.
-4. O App recebe os itens estruturados e permite ao usuário selecionar o que consumiu para calcular sua parte.
+3. O Backend utiliza IA Generativa (Google Gemini Vision) para transcrever e estruturar os itens, além de identificar o estabelecimento e a data.
+4. O App exibe os itens, permite seleção individual, ajuste de quantidades e gorjeta.
+5. O usuário compartilha o resumo final formatado via WhatsApp.
 
 ## 2. Tech Stack
 
@@ -41,8 +42,8 @@ O fluxo principal consiste em:
 ### Backend (`backend/app`)
 - `main.py`: Entrypoint da API.
 - `api/routes/receipt.py`: Endpoint `POST /api/v1/receipts/process` que recebe a imagem.
-- `core/ocr/gemini_vision.py`: **Core Logic**. Contém o prompt enviado ao Gemini para extração JSON.
-- `models/receipt.py`: Modelos Pydantic (`ReceiptData`, `ReceiptItem`).
+- `core/ocr/gemini_vision.py`: **Core Logic**. Contém o prompt enviado ao Gemini para extração JSON (Itens, Data, Local).
+- `models/receipt.py`: Modelos Pydantic (`ReceiptData` com novos campos `establishment_name`, `date`).
 
 ### Android (`android/app/src/main/java/com/divup/app`)
 - `di/`: Módulos Hilt.
@@ -50,7 +51,8 @@ O fluxo principal consiste em:
 - `domain/`: UseCases e Modelos de Domínio.
 - `presentation/`: ViewModels e Telas (Screens).
     - `camera/`: Tela de captura da foto.
-    - `receipt/`: Tela de listagem e seleção de itens.
+    - `receipt/`: Tela de listagem e seleção.
+        - Inclui componentes: `SelectionButtons`, `QuantitySelector`, `TipSelector` (Dialog), `ReceiptHeaderCard` e lógica de `Share`.
 - `ui/theme/`: Definições de Cor (`Color.kt`), Tipografia e Formas.
 
 ## 4. Fluxo de Dados (Data Flow)
@@ -59,10 +61,10 @@ O fluxo principal consiste em:
 3. **Processamento**:
     - FastAPI recebe arquivo temporário.
     - `GeminiVisionExtractor` converte imagem em bytes.
-    - Envia prompt específico para o modelo `gemini-2.5-flash` pedindo JSON estrito.
+    - Envia prompt específico para o modelo `gemini-2.5-flash` pedindo JSON estrito com itens e metadados.
     - Resposta é parseada e convertida para objetos Python.
-4. **Retorno**: JSON contendo lista de itens, preços unitários e totais retorna ao App.
-5. **Exibição**: App renderiza lista interativa.
+4. **Retorno**: JSON contendo lista de itens, preços, subtotal, total, nome do local e data.
+5. **Exibição**: App renderiza lista interativa e permite compartilhamento do resumo calculado.
 
 ## 5. Variáveis de Ambiente Importantes
 Necessárias no `.env` da raiz ou backend:
