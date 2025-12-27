@@ -41,6 +41,14 @@ async def root():
         return FileResponse(index_path, media_type="text/html")
     return {"message": "DivUp API - Use /docs para documentação"}
 
+@app.get("/index.html")
+async def index_html():
+    """Rota alternativa para index.html (compatibilidade com Service Worker)"""
+    index_path = os.path.join(PWA_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path, media_type="text/html")
+    return {"error": "index.html not found"}
+
 @app.get("/manifest.json")
 async def manifest():
     """Serve o manifest da PWA"""

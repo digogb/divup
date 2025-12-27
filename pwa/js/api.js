@@ -17,7 +17,7 @@ const API = {
      */
     async processReceipt(imageFile) {
         const formData = new FormData();
-        formData.append('image', imageFile);
+        formData.append('file', imageFile);  // Backend expects 'file', not 'image'
         
         try {
             const response = await fetch(`${this.BASE_URL}/api/v1/receipt/process`, {
