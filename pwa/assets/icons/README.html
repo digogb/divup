@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Generate PWA Icons</title>
+</head>
+
+<body>
+    <h1>PWA Icon Generator</h1>
+    <p>Este arquivo HTML serve como placeholder. Para gerar os ícones em diferentes tamanhos, você pode:</p>
+
+    <h2>Opção 1: Online</h2>
+    <p>Use um gerador online como <a href="https://www.pwabuilder.com/imageGenerator" target="_blank">PWA Builder Image
+            Generator</a></p>
+
+    <h2>Opção 2: Manual</h2>
+    <p>Redimensione o ícone 512x512 para os seguintes tamanhos:</p>
+    <ul>
+        <li>icon-72.png (72x72)</li>
+        <li>icon-96.png (96x96)</li>
+        <li>icon-128.png (128x128)</li>
+        <li>icon-144.png (144x144)</li>
+        <li>icon-152.png (152x152)</li>
+        <li>icon-192.png (192x192)</li>
+        <li>icon-384.png (384x384)</li>
+        <li>icon-512.png (512x512) ✓ Já existe</li>
+    </ul>
+
+    <h2>Opção 3: ImageMagick (se instalado)</h2>
+    <pre>
+magick icon-512.png -resize 192x192 icon-192.png
+magick icon-512.png -resize 144x144 icon-144.png
+# etc...
+    </pre>
+</body>
+
+</html>

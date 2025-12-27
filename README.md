@@ -24,6 +24,11 @@
 - **CameraX**: Captura de imagem rápida e estável.
 - **Retrofit & Coil**: Comunicação eficiente e carregamento de imagens.
 
+### Web App (iOS/PWA) 🍎
+- **Progressive Web App**: Funciona direto no navegador do iPhone.
+- **Vanilla JS**: Leve e rápido, sem frameworks pesados.
+- **Web Share API**: Compartilhe seu resumo facilmente.
+
 ## 🏁 Como Rodar
 
 ### Pré-requisitos
@@ -58,6 +63,28 @@
 3. Conecte seu dispositivo ou inicie um emulador.
 4. Execute o app (Run 'app').
    > **Nota**: Se estiver usando emulador, o backend deve estar acessível via `10.0.2.2`. Se estiver usando dispositivo físico, certifique-se de que ambos estão na mesma Wi-Fi e atualize o IP no `build.gradle.kts`.
+
+### 3. Acessando no iOS (PWA)
+
+A versão web funciona em qualquer iPhone via navegador:
+
+1. **Opção A - Hospedagem local** (para testes):
+   ```bash
+   cd pwa
+   python -m http.server 8080
+   ```
+   Acesse `http://SEU_IP:8080` no Safari do iPhone (mesma rede Wi-Fi).
+
+2. **Opção B - Hospedagem na nuvem** (recomendado):
+   - Faça deploy da pasta `pwa/` em qualquer serviço de hospedagem estática (Netlify, Vercel, GitHub Pages).
+   - Acesse a URL pelo Safari no iPhone.
+
+3. **Adicionar à Tela Inicial** (para experiência de app):
+   - No Safari, toque no ícone de compartilhar (quadrado com seta).
+   - Selecione "Adicionar à Tela de Início".
+   - O app aparecerá como um ícone no seu iPhone!
+
+> **Nota**: O backend precisa estar acessível publicamente (http://164.152.197.117:8001) para a PWA funcionar.
 
 ## 🤝 Contribuição
 
