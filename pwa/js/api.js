@@ -4,8 +4,11 @@
  */
 
 const API = {
-    // Backend URL from Android app configuration
-    BASE_URL: 'http://164.152.197.117:8001',
+    // Base URL - empty for same-origin (when PWA and API run together)
+    // Falls back to OCI server for standalone testing
+    BASE_URL: window.location.hostname === 'localhost' && window.location.port === '8080' 
+        ? 'http://164.152.197.117:8001' 
+        : '',
     
     /**
      * Process a receipt image

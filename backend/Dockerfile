@@ -9,14 +9,19 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copiar requirements
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código
-COPY ./app ./app
+# Copiar código do backend
+COPY backend/app ./app
+
+# Copiar PWA (frontend web para iOS)
+COPY pwa ./pwa
 
 # Expor porta
 EXPOSE 8001
 
-# Hot reload para desenvolvimento
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+# Servidor (sem --reload em produção para melhor performance)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+
+

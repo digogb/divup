@@ -55,6 +55,8 @@ docker-compose up -d --build
 ```
 Isso vai construir a imagem e iniciar o serviço na porta `8001`.
 
+> **📱 Android + 🍎 iOS**: O servidor agora serve tanto a API (para o app Android em `/api/v1/...`) quanto a PWA (para iOS em `/`). Acesse `http://IP:8001` no Safari do iPhone para usar o DivUp!
+
 ## 5. Liberar Porta no Firewall (Importante!) 🔥
 
 Na Oracle Cloud, você precisa liberar o tráfego em dois lugares:
