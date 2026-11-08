@@ -42,7 +42,7 @@ async def cache_headers(request, call_next):
         response.headers["Cache-Control"] = "no-store"
     elif path.startswith("/assets/"):
         response.headers["Cache-Control"] = "public, max-age=604800"
-    elif path in ("/", "/index.html", "/sw.js", "/manifest.json") or path.startswith(("/js/", "/css/")):
+    elif path in ("/", "/index.html", "/sw.js", "/manifest.json", "/privacidade", "/termos") or path.startswith(("/js/", "/css/")):
         response.headers["Cache-Control"] = "no-cache"
     return response
 
@@ -73,6 +73,15 @@ async def index_html():
     if os.path.exists(index_path):
         return FileResponse(index_path, media_type="text/html")
     return {"error": "index.html not found"}
+
+@app.get("/privacidade")
+async def privacy_policy():
+    """Política de Privacidade (link exigido pelo Google para o login)."""
+    return FileResponse(os.path.join(PWA_DIR, "privacidade.html"), media_type="text/html")
+
+@app.get("/termos")
+async def terms_of_use():
+    return FileResponse(os.path.join(PWA_DIR, "termos.html"), media_type="text/html")
 
 @app.get("/manifest.json")
 async def manifest():

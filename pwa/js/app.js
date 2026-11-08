@@ -59,7 +59,7 @@ const App = {
         const s = this.state;
         let html = '';
         switch (s.screen) {
-            case 'home': html = Components.homeScreen(s.user); break;
+            case 'home': html = Components.homeScreen(s.user, !!s.authConfig?.google_client_id); break;
             case 'history': html = Components.historyScreen(this.historyView()); break;
             case 'loading': html = Components.loadingScreen(s.loading.photoUrl, s.loading.step); break;
             case 'receipt': html = Components.receiptScreen(this.receiptView()); break;

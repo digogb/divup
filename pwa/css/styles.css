@@ -599,3 +599,6 @@ svg { flex-shrink: 0; }
     padding: 40px 12px;
 }
 .history-empty strong { color: var(--ink); font-size: 17px; }
+
+.sheet-fine a { color: var(--accent); }
+.legal-links { text-align: center; }

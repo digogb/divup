@@ -91,14 +91,14 @@ const Components = {
         return `<span class="avatar" style="width:${size}px;height:${size}px">${initial}</span>`;
     },
 
-    homeScreen(user) {
+    homeScreen(user, canLogin) {
         return `
             <main class="screen home">
                 <div class="home-top">
                     <div class="brand">${Icons.logo}<span class="brand-name">divup</span></div>
                     ${user
                         ? `<button class="icon-btn" data-action="open-account" aria-label="Sua conta">${this.avatar(user)}</button>`
-                        : `<button class="btn-text" data-action="open-account">Entrar</button>`}
+                        : canLogin ? `<button class="btn-text" data-action="open-account">Entrar</button>` : ''}
                 </div>
 
                 <div class="home-hero" aria-hidden="true">
@@ -382,7 +382,9 @@ const Components = {
                     ? `<div class="google-btn" id="googleButton" aria-live="polite"><span class="sheet-text">Carregando…</span></div>`
                     : `<p class="field-error">O login está indisponível no momento.</p>`}
                 ${v.error ? `<p class="field-error" role="alert">${Fmt.esc(v.error)}</p>` : ''}
-                <p class="sheet-fine">Guardamos só o nome do local, a data, os itens e os valores. Nunca a foto da nota.</p>
+                <p class="sheet-fine">Guardamos só o nome do local, a data, os itens e os valores. Nunca a foto da nota.
+                    Ao entrar, você concorda com os <a href="/termos" target="_blank" rel="noopener">Termos de Uso</a>
+                    e a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</p>
             `;
         } else if (v.confirmDelete) {
             body = `
@@ -415,6 +417,7 @@ const Components = {
                     <button class="btn btn-secondary" data-action="logout">Sair</button>
                     <button class="btn-text btn-danger" data-action="delete-account">Excluir minha conta e dados</button>
                 </div>
+                <p class="sheet-fine legal-links"><a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a> · <a href="/termos" target="_blank" rel="noopener">Termos de Uso</a></p>
             `;
         }
         return `
