@@ -1,4 +1,4 @@
-const CACHE_NAME = 'divup-v2';
+const CACHE_NAME = 'divup-v3';
 const urlsToCache = [
     '/',
     '/index.html',
@@ -6,7 +6,8 @@ const urlsToCache = [
     '/js/app.js',
     '/js/api.js',
     '/js/components.js',
-    '/assets/icons/icon-192.png'
+    '/assets/icons/icon-192.png',
+    '/assets/icons/icon.svg'
 ];
 
 // Install event - cache static assets

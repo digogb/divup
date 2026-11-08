@@ -145,8 +145,8 @@ class GeminiVisionExtractor:
         return ReceiptData(
             raw_text=response_text,
             items=items,
-            subtotal=data.get("subtotal", sum(i.total_price for i in items)),
-            total=data.get("total", sum(i.total_price for i in items)),
+            subtotal=data.get("subtotal") or sum(i.total_price for i in items),
+            total=data.get("total") or sum(i.total_price for i in items),
             confidence_score=0.98,
             establishment_name=est_name,
             date=date_str

@@ -1,313 +1,346 @@
 /**
  * DivUp PWA - UI Components
- * Reusable HTML components matching Android design
+ * Funções puras que devolvem HTML. Todo texto vindo da nota passa por esc().
  */
 
+const Fmt = {
+    esc(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    },
+    round2(n) {
+        return Math.round((n + Number.EPSILON) * 100) / 100;
+    },
+    brl(n) {
+        return 'R$ ' + Fmt.round2(n).toFixed(2).replace('.', ',');
+    },
+    num(n) {
+        return String(Fmt.round2(n)).replace('.', ',');
+    },
+    /** Aceita "12,5", "12.5" e "1.234,56". Retorna NaN se inválido. */
+    parseNum(text) {
+        let s = String(text ?? '').trim().replace(/\s|R\$/g, '');
+        if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+        if (!/^\d*\.?\d+$|^\d+\.$/.test(s)) return NaN;
+        return parseFloat(s);
+    },
+    plural(n, one, many) {
+        return `${n} ${n === 1 ? one : many}`;
+    }
+};
+
+const Icons = {
+    logo: `<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+        <path d="M12.6 2a12 12 0 0 0 0 24z" fill="currentColor"/>
+        <path d="M15.4 2a12 12 0 0 1 0 24z" style="fill: var(--accent)"/>
+    </svg>`,
+    camera: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
+    gallery: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L5 21"/></svg>`,
+    back: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m11 6-6 6 6 6"/></svg>`,
+    check: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`,
+    checkSmall: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`,
+    checkCircle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" style="fill: var(--accent)"/><path d="m7.5 12.5 3 3 6-6.5" style="stroke: var(--on-accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    stepDone: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" style="fill: var(--accent)"/><path d="m7.5 12.5 3 3 6-6.5" style="stroke: var(--on-accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    alert: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6"/><path d="M12 16.5h.01"/></svg>`,
+    alertLarge: `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6"/><path d="M12 16.5h.01"/></svg>`,
+    minus: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>`,
+    plus: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>`,
+    people: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg>`,
+    send: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/></svg>`,
+    close: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
+    pencil: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>`,
+    chat: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>`,
+    copy: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>`,
+    more: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>`
+};
+
 const Components = {
-    
+
     // ========================
-    // Icons (SVG)
+    // Início
     // ========================
-    icons: {
-        camera: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-        </svg>`,
-        
-        gallery: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-        </svg>`,
-        
-        check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-        </svg>`,
-        
-        checkCircle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>`,
-        
-        clear: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>`,
-        
-        share: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="18" cy="5" r="3"/>
-            <circle cx="6" cy="12" r="3"/>
-            <circle cx="18" cy="19" r="3"/>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-        </svg>`,
-        
-        minus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>`,
-        
-        plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>`,
-        
-        back: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"/>
-            <polyline points="12 19 5 12 12 5"/>
-        </svg>`
-    },
-    
-    // ========================
-    // Camera Screen
-    // ========================
-    cameraScreen() {
+    homeScreen() {
         return `
-            <div class="screen-camera fade-in">
-                <div class="camera-header">
-                    <h1>📝 DivUp</h1>
-                    <p>Fotografe a conta</p>
-                </div>
-                
-                <div class="camera-preview">
-                    <div class="camera-frame">
-                        <span class="camera-hint">Centralize a conta no quadro</span>
+            <main class="screen home">
+                <div class="brand">${Icons.logo}<span class="brand-name">divup</span></div>
+
+                <div class="home-hero" aria-hidden="true">
+                    <div class="mini-receipt">
+                        <div class="mini-receipt-title">SUA CONTA</div>
+                        <div class="mini-row on"><span>${Icons.checkSmall}Entrada (÷ 2)</span><span>24,50</span></div>
+                        <div class="mini-row"><span>Prato do dia</span><span>42,00</span></div>
+                        <div class="mini-row on"><span>${Icons.checkSmall}Suco (1 de 2)</span><span>11,00</span></div>
+                        <div class="mini-row"><span>Sobremesa</span><span>16,00</span></div>
+                        <div class="mini-row on"><span>${Icons.checkSmall}Café</span><span>7,50</span></div>
+                        <div class="mini-total"><span>Sua parte</span><strong>R$ 47,30</strong></div>
                     </div>
                 </div>
-                
-                <div class="camera-controls">
-                    <input type="file" id="galleryInput" class="file-input" accept="image/*">
+
+                <div class="home-copy">
+                    <h1>Cada um paga o que consumiu.</h1>
+                    <p>Fotografe a conta, toque nos seus itens e mande sua parte no grupo.</p>
+                </div>
+
+                <div class="home-actions">
                     <input type="file" id="cameraInput" class="file-input" accept="image/*" capture="environment">
-                    
-                    <button class="btn-gallery" id="btnGallery">
-                        ${this.icons.gallery}
-                        <span>Galeria</span>
-                    </button>
-                    
-                    <button class="btn-capture" id="btnCapture">
-                        <div class="btn-capture-inner">
-                            ${this.icons.camera}
+                    <input type="file" id="galleryInput" class="file-input" accept="image/*">
+                    <button class="btn btn-primary" data-action="camera">${Icons.camera}Fotografar conta</button>
+                    <button class="btn btn-secondary" data-action="gallery">${Icons.gallery}Escolher da galeria</button>
+                </div>
+            </main>
+        `;
+    },
+
+    // ========================
+    // Lendo a nota
+    // ========================
+    loadingSteps(step) {
+        const labels = ['Otimizando a foto', 'Lendo itens e preços', 'Conferindo com o total da nota'];
+        const steps = labels.map((label, i) => {
+            const cls = i < step ? 'done' : i === step ? 'active' : '';
+            const icon = i < step ? Icons.stepDone : i === step ? '<span class="ring"></span>' : '<span class="step-dot"></span>';
+            return `<li class="step ${cls}"><span class="step-icon">${icon}</span><span>${label}</span></li>`;
+        }).join('');
+        return `<ol class="steps" aria-live="polite">${steps}</ol>`;
+    },
+
+    loadingScreen(photoUrl, step) {
+        return `
+            <main class="screen loading" aria-busy="true">
+                <div><button class="btn-text" data-action="cancel-loading">Cancelar</button></div>
+                <div class="loading-photo-wrap">
+                    <div class="loading-photo">
+                        ${photoUrl ? `<img src="${Fmt.esc(photoUrl)}" alt="">` : ''}
+                        <div class="scanline"></div>
+                    </div>
+                </div>
+                <div>
+                    <h1>Lendo a nota…</h1>
+                    ${this.loadingSteps(step)}
+                </div>
+            </main>
+        `;
+    },
+
+    // ========================
+    // Divisão
+    // ========================
+    receiptScreen(view) {
+        return `
+            <main class="screen receipt">
+                <header class="receipt-top">
+                    <button class="icon-btn" data-action="new-receipt" aria-label="Nova nota">${Icons.back}</button>
+                    <div class="receipt-title">
+                        <strong>${Fmt.esc(view.title)}</strong>
+                        <span id="receiptSubtitle">${Fmt.esc(view.subtitle)}</span>
+                    </div>
+                    <button class="btn-text" data-action="toggle-edit" id="btnEdit">${view.editing ? 'Concluir' : 'Editar'}</button>
+                </header>
+
+                <div id="checkStrip">${this.checkStrip(view.check)}</div>
+
+                <div class="list-head">
+                    <span id="listHint">${view.editing ? 'Toque num item para corrigir' : 'Toque no que é seu'}</span>
+                    <button class="btn-text" data-action="bulk" id="btnBulk" ${view.editing ? 'hidden' : ''}>${view.bulkLabel}</button>
+                </div>
+
+                <div class="item-list" id="itemList">
+                    ${view.items.map(it => this.itemCard(it)).join('')}
+                    <button class="add-item" data-action="add-item">${Icons.plus}Adicionar item que faltou</button>
+                </div>
+
+                <footer class="footer" id="footer">${this.footer(view.footer)}</footer>
+            </main>
+            <div id="sheetRoot"></div>
+        `;
+    },
+
+    checkStrip(check) {
+        if (!check) return '';
+        if (check.ok) {
+            return `<div class="check-strip">${Icons.checkCircle}<span>Os itens somam <strong>${check.sum}</strong> — bate com o total da nota.</span></div>`;
+        }
+        return `<div class="check-strip warn" role="status">${Icons.alert}<span>Os itens somam <strong>${check.sum}</strong>, mas a nota indica <strong>${check.expected}</strong>. Confira se faltou algum item.</span></div>`;
+    },
+
+    itemCard(it) {
+        const cls = ['item', it.selected ? 'is-selected' : '', it.editing ? 'is-editing' : ''].join(' ');
+        const action = it.editing ? 'edit-item' : 'toggle';
+        const label = it.editing ? `Editar ${Fmt.esc(it.name)}` : '';
+
+        return `
+            <div class="${cls}" data-item="${Fmt.esc(it.id)}">
+                <button class="item-main" data-action="${action}" data-id="${Fmt.esc(it.id)}"
+                        ${it.editing ? `aria-label="${label}"` : `aria-pressed="${it.selected}"`}>
+                    <span class="check">${it.editing ? Icons.pencil : Icons.check}</span>
+                    <span class="item-text">
+                        <span class="item-name">${Fmt.esc(it.name)}</span>
+                        <span class="item-meta">${it.meta}</span>
+                    </span>
+                    <span class="item-price">
+                        <span class="price">${it.price}</span>
+                        ${it.priceSub ? `<span class="price-sub">${it.priceSub}</span>` : ''}
+                    </span>
+                </button>
+                ${it.showQty ? `
+                    <div class="item-row">
+                        <span class="item-row-label">Quantas são suas?</span>
+                        <div class="stepper">
+                            <button class="step-btn" data-action="qty-dec" data-id="${Fmt.esc(it.id)}" aria-label="Diminuir quantidade" ${it.qtyDecDisabled ? 'disabled' : ''}>${Icons.minus}</button>
+                            <span class="stepper-value">${it.qtyLabel}</span>
+                            <button class="step-btn plus" data-action="qty-inc" data-id="${Fmt.esc(it.id)}" aria-label="Aumentar quantidade" ${it.qtyIncDisabled ? 'disabled' : ''}>${Icons.plus}</button>
                         </div>
-                    </button>
+                    </div>` : ''}
+                ${it.canSplit ? `
+                    <div class="item-split">
+                        <button class="btn-text" data-action="split-start" data-id="${Fmt.esc(it.id)}">${Icons.people}Dividir com outras pessoas</button>
+                    </div>` : ''}
+                ${it.isSplit ? `
+                    <div class="item-row">
+                        <span class="item-row-label">Dividido entre</span>
+                        <div class="stepper">
+                            <button class="step-btn" data-action="split-dec" data-id="${Fmt.esc(it.id)}" aria-label="Menos pessoas">${Icons.minus}</button>
+                            <span class="stepper-value wide">${it.splitLabel}</span>
+                            <button class="step-btn plus" data-action="split-inc" data-id="${Fmt.esc(it.id)}" aria-label="Mais pessoas" ${it.splitIncDisabled ? 'disabled' : ''}>${Icons.plus}</button>
+                        </div>
+                    </div>` : ''}
+            </div>
+        `;
+    },
+
+    footer(f) {
+        const chips = f.tips.map(tp => `
+            <button class="chip" data-action="tip" data-tip="${tp.value}" aria-pressed="${tp.on}">${tp.label}</button>
+        `).join('');
+
+        return `
+            <div class="footer-row">
+                <span class="label" id="tipLabel">Serviço</span>
+                <div class="chips" role="group" aria-labelledby="tipLabel">${chips}</div>
+            </div>
+            ${f.customOn ? `
+                <label class="custom-tip">
+                    <span>Outro valor de serviço</span>
+                    <span class="custom-tip-field">
+                        <input id="customTip" type="text" inputmode="decimal" autocomplete="off" value="${Fmt.esc(f.customValue)}" aria-label="Percentual de serviço">
+                        %
+                    </span>
+                </label>` : ''}
+            <div class="footer-row">
+                <div class="total-block" aria-live="polite">
+                    <span class="label">Sua parte</span>
+                    <span class="total-value" id="totalValue">${f.total}</span>
+                    <span class="total-detail" id="totalDetail">${f.detail}</span>
                 </div>
+                <button class="btn btn-primary" data-action="open-share" id="btnSend" ${f.any ? '' : 'disabled'}>${Icons.send}Enviar</button>
             </div>
         `;
     },
-    
+
     // ========================
-    // Loading Screen
+    // Sheet: enviar
     // ========================
-    loadingScreen() {
+    shareSheet(s) {
+        const lines = s.lines.map(l => `
+            <div class="share-line"><span>${Fmt.esc(l.label)}</span><span>${l.value}</span></div>
+        `).join('');
+
         return `
-            <div class="screen-loading fade-in">
-                <div class="spinner"></div>
-                <p class="loading-text">Analisando conta...</p>
-                <p class="loading-powered">Powered by Gemini AI ✨</p>
-            </div>
-        `;
-    },
-    
-    // ========================
-    // Receipt Screen
-    // ========================
-    receiptScreen(receipt, billSplit, tipPercentage) {
-        const hasSelection = receipt.items.some(item => item.selectedQuantity > 0);
-        
-        return `
-            <div class="screen-receipt fade-in">
-                <div class="receipt-header">
-                    <h1>Divisão de Conta</h1>
-                    ${hasSelection ? `
-                        <button class="btn btn-icon" id="btnShare" title="Compartilhar">
-                            ${this.icons.share}
-                        </button>
-                    ` : ''}
-                </div>
-                
-                <div class="receipt-content">
-                    ${this.receiptInfo(receipt)}
-                    ${this.selectionButtons()}
-                    ${this.itemsCounter(receipt)}
-                    ${this.itemsList(receipt)}
-                </div>
-                
-                ${this.bottomBar(billSplit, tipPercentage)}
-            </div>
-            
-            ${this.tipModal()}
-        `;
-    },
-    
-    receiptInfo(receipt) {
-        if (!receipt.establishmentName && !receipt.date) return '';
-        
-        return `
-            <div class="receipt-info slide-up">
-                <div class="receipt-establishment">${receipt.establishmentName || 'Estabelecimento'}</div>
-                ${receipt.date ? `<div class="receipt-date">${receipt.date}</div>` : ''}
-            </div>
-        `;
-    },
-    
-    selectionButtons() {
-        return `
-            <div class="selection-buttons">
-                <button class="btn btn-primary" id="btnSelectAll">
-                    ${this.icons.checkCircle}
-                    <span>Selecionar Tudo</span>
-                </button>
-                <button class="btn btn-secondary" id="btnClearSelection">
-                    ${this.icons.clear}
-                    <span>Limpar</span>
-                </button>
-            </div>
-        `;
-    },
-    
-    itemsCounter(receipt) {
-        const totalItems = receipt.items.length;
-        const selectedCount = receipt.items.filter(item => item.selectedQuantity > 0).length;
-        
-        return `
-            <div class="items-counter">
-                <span>${totalItems} itens na conta</span>
-                ${selectedCount > 0 ? `<span class="selected-badge">${selectedCount} selecionados</span>` : ''}
-            </div>
-        `;
-    },
-    
-    itemsList(receipt) {
-        return receipt.items.map((item, index) => this.itemCard(item, index)).join('');
-    },
-    
-    itemCard(item, index) {
-        const isSelected = item.selectedQuantity > 0;
-        const hasMultipleQuantity = item.quantity > 1;
-        
-        return `
-            <div class="item-card ${isSelected ? 'selected' : ''} slide-up" 
-                 data-item-id="${item.id}" 
-                 style="animation-delay: ${index * 50}ms">
-                <div class="item-header">
-                    <div class="item-checkbox">
-                        ${this.icons.check}
+            <div class="sheet-scrim" data-action="close-sheet">
+                <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+                    <div class="sheet-handle"></div>
+                    <div class="sheet-head">
+                        <h2 id="shareTitle">Enviar sua parte</h2>
+                        <button class="icon-btn" data-action="close-sheet" aria-label="Fechar">${Icons.close}</button>
                     </div>
-                    <div class="item-info">
-                        <div class="item-name">${item.name}</div>
-                        <div class="item-quantity">${item.quantity}x R$ ${item.unitPrice.toFixed(2)}</div>
+
+                    <div class="share-preview">
+                        <div class="title">${Fmt.esc(s.title)}</div>
+                        ${lines}
+                        <div class="share-total"><span>Minha parte</span><strong>${s.total}</strong></div>
                     </div>
-                    <div class="item-price">R$ ${item.totalPrice.toFixed(2)}</div>
-                </div>
-                
-                ${hasMultipleQuantity ? this.quantitySelector(item) : ''}
-            </div>
-        `;
-    },
-    
-    quantitySelector(item) {
-        const showPartial = item.selectedQuantity > 0 && item.selectedQuantity < item.quantity;
-        
-        return `
-            <div class="quantity-selector">
-                <div class="quantity-label">Quantos você consumiu?</div>
-                <div class="quantity-controls">
-                    <button class="quantity-btn quantity-btn-minus" 
-                            data-item-id="${item.id}" 
-                            data-action="decrease"
-                            ${item.selectedQuantity === 0 ? 'disabled' : ''}>
-                        ${this.icons.minus}
-                    </button>
-                    <div class="quantity-value">${item.selectedQuantity} / ${item.quantity}</div>
-                    <button class="quantity-btn quantity-btn-plus" 
-                            data-item-id="${item.id}" 
-                            data-action="increase"
-                            ${item.selectedQuantity === item.quantity ? 'disabled' : ''}>
-                        ${this.icons.plus}
-                    </button>
-                </div>
-                ${showPartial ? `
-                    <div class="quantity-partial">Sua parte: R$ ${(item.unitPrice * item.selectedQuantity).toFixed(2)}</div>
-                ` : ''}
-            </div>
-        `;
-    },
-    
-    bottomBar(billSplit, tipPercentage) {
-        return `
-            <div class="bottom-bar">
-                ${this.tipSelector(tipPercentage)}
-                ${this.summaryCard(billSplit)}
-            </div>
-        `;
-    },
-    
-    tipSelector(tipPercentage) {
-        const isCustom = tipPercentage !== 0 && tipPercentage !== 10;
-        
-        return `
-            <div class="tip-section">
-                <div class="tip-title">Gorjeta</div>
-                <div class="tip-chips">
-                    <button class="tip-chip ${tipPercentage === 0 ? 'active' : ''}" data-tip="0">0%</button>
-                    <button class="tip-chip ${tipPercentage === 10 ? 'active' : ''}" data-tip="10">10%</button>
-                    <button class="tip-chip ${isCustom ? 'active' : ''}" data-tip="custom" id="btnCustomTip">
-                        ${isCustom ? `${Math.round(tipPercentage)}%` : 'Outro'}
-                    </button>
-                </div>
-            </div>
-        `;
-    },
-    
-    summaryCard(billSplit) {
-        return `
-            <div class="summary-card">
-                <div class="summary-row">
-                    <span>Subtotal</span>
-                    <span>R$ ${billSplit.itemsSubtotal.toFixed(2)}</span>
-                </div>
-                <div class="summary-row">
-                    <span>Gorjeta (${Math.round(billSplit.tipPercentage)}%)</span>
-                    <span>R$ ${billSplit.tipAmount.toFixed(2)}</span>
-                </div>
-                <div class="summary-divider"></div>
-                <div class="summary-total">
-                    <span class="summary-total-label">TOTAL</span>
-                    <span class="summary-total-value">R$ ${billSplit.total.toFixed(2)}</span>
-                </div>
-            </div>
-        `;
-    },
-    
-    tipModal() {
-        return `
-            <div class="modal-overlay" id="tipModal">
-                <div class="modal">
-                    <div class="modal-title">Gorjeta Personalizada</div>
-                    <input type="number" class="modal-input" id="tipInput" placeholder="Porcentagem (%)" min="0" max="100">
-                    <div class="modal-actions">
-                        <button class="modal-btn modal-btn-cancel" id="btnCancelTip">Cancelar</button>
-                        <button class="modal-btn modal-btn-confirm" id="btnConfirmTip">OK</button>
+
+                    <label class="check-row">
+                        <input type="checkbox" id="pixToggle" ${s.pixOn ? 'checked' : ''}>
+                        <span>Incluir minha chave Pix</span>
+                    </label>
+                    <div class="field" id="pixField" ${s.pixOn ? '' : 'hidden'}>
+                        <label for="pixKey">Chave Pix (fica salva só neste aparelho)</label>
+                        <input id="pixKey" type="text" autocomplete="off" value="${Fmt.esc(s.pixKey)}" placeholder="CPF, e-mail, telefone ou chave aleatória">
                     </div>
-                </div>
+
+                    <div class="sheet-actions">
+                        <button class="btn btn-primary" data-action="share-whatsapp">${Icons.chat}Enviar no WhatsApp</button>
+                        <button class="btn btn-secondary" data-action="share-copy">${Icons.copy}Copiar texto</button>
+                        ${s.canNativeShare ? `<button class="btn btn-secondary" data-action="share-native">${Icons.more}Outros apps</button>` : ''}
+                    </div>
+                </section>
             </div>
         `;
     },
-    
+
     // ========================
-    // Error Screen
+    // Sheet: editar / adicionar item
+    // ========================
+    itemSheet(item) {
+        const isNew = !item;
+        const name = item ? item.name : '';
+        const qty = item ? item.quantity : 1;
+        const price = item ? Fmt.round2(item.unitPrice).toFixed(2).replace('.', ',') : '';
+
+        return `
+            <div class="sheet-scrim" data-action="close-sheet">
+                <form class="sheet" id="itemForm" role="dialog" aria-modal="true" aria-labelledby="itemSheetTitle" novalidate>
+                    <div class="sheet-handle"></div>
+                    <div class="sheet-head">
+                        <h2 id="itemSheetTitle">${isNew ? 'Adicionar item' : 'Corrigir item'}</h2>
+                        <button type="button" class="icon-btn" data-action="close-sheet" aria-label="Fechar">${Icons.close}</button>
+                    </div>
+
+                    <div class="field">
+                        <label for="fName">Nome</label>
+                        <input id="fName" name="name" type="text" autocomplete="off" value="${Fmt.esc(name)}" required>
+                    </div>
+                    <div class="field-row">
+                        <div class="field">
+                            <label for="fQty">Quantidade</label>
+                            <input id="fQty" name="qty" type="number" inputmode="numeric" min="1" max="99" step="1" value="${qty}" required>
+                        </div>
+                        <div class="field">
+                            <label for="fPrice">Preço unitário (R$)</label>
+                            <input id="fPrice" name="price" type="text" inputmode="decimal" autocomplete="off" value="${price}" placeholder="0,00" required>
+                        </div>
+                    </div>
+                    <p class="field-error" id="itemFormError" hidden></p>
+
+                    <div class="sheet-actions">
+                        <button type="submit" class="btn btn-primary">${isNew ? 'Adicionar' : 'Salvar'}</button>
+                        ${isNew ? '' : `<button type="button" class="btn btn-secondary btn-danger" data-action="delete-item" data-id="${Fmt.esc(item.id)}">Remover item</button>`}
+                    </div>
+                </form>
+            </div>
+        `;
+    },
+
+    // ========================
+    // Erro
     // ========================
     errorScreen(message) {
         return `
-            <div class="screen-error fade-in">
-                <div class="error-emoji">😕</div>
-                <div class="error-title">Ops! Algo deu errado</div>
-                <div class="error-message">${message}</div>
-                <button class="btn btn-primary btn-large" id="btnRetry">
-                    Tentar Novamente
-                </button>
-            </div>
+            <main class="screen error">
+                <div class="error-icon">${Icons.alertLarge}</div>
+                <h1>Não deu para ler a nota</h1>
+                <p>${Fmt.esc(message)}</p>
+                <button class="btn btn-primary" data-action="retry">Tentar de novo</button>
+            </main>
         `;
     }
 };
 
-// Make Components available globally
+window.Fmt = Fmt;
+window.Icons = Icons;
 window.Components = Components;

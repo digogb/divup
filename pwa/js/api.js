@@ -64,62 +64,76 @@ const API = {
         }
     },
 
-    async processReceipt(imageFile) {
-        const uploadFile = await this.compressImage(imageFile);
-        const formData = new FormData();
-        formData.append('file', uploadFile);  // Backend expects 'file', not 'image'
-        
-        try {
-            const response = await fetch(`${this.BASE_URL}/api/v1/receipt/process`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.detail || `Erro ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.error || 'Erro ao processar a nota');
-            }
-            
-            return this.transformReceiptData(data.receipt);
-        } catch (error) {
-            console.error('API Error:', error);
-            
-            // Check for network errors
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão.');
-            }
-            
-            throw error;
-        }
-    },
-    
     /**
-     * Transform backend receipt data to app format
-     * @param {Object} receiptDto - Raw receipt data from API
-     * @returns {Object} - Transformed receipt data
+     * Envia a foto e devolve a nota no formato do app.
+     * @param {File} imageFile
+     * @param {{signal?: AbortSignal, onProgress?: (step: number) => void}} options
+     *        onProgress(1) quando a foto já foi otimizada e o upload começou.
      */
-    transformReceiptData(receiptDto) {
+    async processReceipt(imageFile, { signal, onProgress } = {}) {
+        const uploadFile = await this.compressImage(imageFile);
+        if (signal?.aborted) throw new DOMException('Cancelado', 'AbortError');
+        onProgress?.(1);
+
+        const formData = new FormData();
+        formData.append('file', uploadFile);
+
+        let response;
+        try {
+            response = await fetch(`${this.BASE_URL}/api/v1/receipt/process`, {
+                method: 'POST',
+                body: formData,
+                signal
+            });
+        } catch (error) {
+            if (error.name === 'AbortError') throw error;
+            // Chrome: "Failed to fetch"; Safari: "Load failed" — ambos TypeError
+            throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão e tente de novo.');
+        }
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `O servidor respondeu com erro (${response.status}).`);
+        }
+
+        const data = await response.json();
+        if (!data.success) {
+            console.error('API Error:', data.error);
+            throw new Error('Não consegui ler essa nota. Tente outra foto, com a nota inteira e bem iluminada.');
+        }
+
+        const receipt = this.transformReceiptData(data.receipt);
+        if (!receipt.items.length) {
+            throw new Error('Não encontrei itens nessa foto. Confira se a nota aparece inteira e legível.');
+        }
+        return receipt;
+    },
+
+    /**
+     * Converte a resposta do backend para o formato usado pelo app.
+     */
+    transformReceiptData(dto) {
+        const items = (dto.items || []).map((item, i) => {
+            const quantity = Math.max(1, Math.round(Number(item.quantity) || 1));
+            let unitPrice = Number(item.unit_price) || 0;
+            if (!unitPrice && item.total_price) unitPrice = Number(item.total_price) / quantity;
+            return {
+                id: item.id || `item-${i}`,
+                name: String(item.name || 'Item').trim(),
+                quantity,
+                unitPrice,
+                sel: 0,      // unidades que são "minhas"
+                split: 1     // com quantas pessoas divido
+            };
+        });
+
         return {
-            id: receiptDto.id,
-            establishmentName: receiptDto.establishment_name || null,
-            date: receiptDto.date || null,
-            items: receiptDto.items.map(item => ({
-                id: item.id,
-                name: item.name,
-                quantity: item.quantity,
-                unitPrice: item.unit_price,
-                totalPrice: item.total_price,
-                selectedQuantity: 0 // Not selected initially
-            })),
-            subtotal: receiptDto.subtotal,
-            total: receiptDto.total,
-            confidenceScore: receiptDto.confidence_score
+            id: dto.id,
+            title: dto.establishment_name || 'Sua conta',
+            date: dto.date || '',
+            subtotal: Number(dto.subtotal) || 0,
+            total: Number(dto.total) || 0,
+            items
         };
     }
 };
