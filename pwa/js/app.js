@@ -79,22 +79,44 @@ const App = {
         return it.sel * it.unitPrice / it.split;
     },
 
+    /** Soma de todos os itens (já com desconto de item) e o desconto da conta aplicável. */
+    billDiscount() {
+        const r = this.state.receipt;
+        const itemsSum = (r?.items || []).reduce((acc, it) => acc + it.quantity * it.unitPrice, 0);
+        const discount = Math.min(r?.discount || 0, itemsSum);
+        return { itemsSum, discount, ratio: itemsSum > 0 ? discount / itemsSum : 0 };
+    },
+
     totals() {
         const items = this.state.receipt?.items || [];
-        const subtotal = items.reduce((sum, it) => sum + this.itemShare(it), 0);
+        const itemsAmount = items.reduce((sum, it) => sum + this.itemShare(it), 0);
+        // Desconto da conta rateado proporcionalmente ao que cada um consumiu
+        const myDiscount = itemsAmount * this.billDiscount().ratio;
+        const subtotal = itemsAmount - myDiscount;
         const pct = this.tipPercent();
         const tipAmount = subtotal * pct / 100;
-        return { subtotal, pct, tipAmount, total: subtotal + tipAmount, any: items.some(it => it.sel > 0) };
+        return {
+            itemsAmount, myDiscount, subtotal, pct, tipAmount,
+            total: subtotal + tipAmount,
+            any: items.some(it => it.sel > 0)
+        };
     },
 
     checkView() {
         const r = this.state.receipt;
-        if (!r) return null;
-        const sum = r.items.reduce((acc, it) => acc + it.quantity * it.unitPrice, 0);
+        if (!r || !r.items.length) return null;
+        const bill = this.billDiscount();
+        const sum = bill.itemsSum - bill.discount;
+        const savings = bill.discount + r.items.reduce((acc, it) => acc + (it.discount || 0), 0);
         const candidates = [r.subtotal, r.total].filter(v => typeof v === 'number' && v > 0);
-        if (!candidates.length || !r.items.length) return null;
+        if (!candidates.length) return null;
         const ok = candidates.some(v => Math.abs(v - sum) <= 0.05);
-        return { ok, sum: Fmt.brl(sum), expected: Fmt.brl(candidates[0]) };
+        return {
+            ok,
+            sum: Fmt.brl(sum),
+            expected: Fmt.brl(r.total || candidates[0]),
+            savings: savings > 0.004 ? Fmt.brl(savings) : ''
+        };
     },
 
     // =====================================================
@@ -110,7 +132,7 @@ const App = {
             name: it.name,
             editing,
             selected: selected && !editing,
-            meta: it.quantity > 1 ? `${it.quantity} × ${Fmt.brl(it.unitPrice)}` : Fmt.brl(it.unitPrice),
+            meta: this.itemMeta(it),
             price: Fmt.brl(selected && !editing ? this.itemShare(it) : full),
             priceSub: partial && !editing ? `${it.split > 1 ? `÷ ${it.split} · ` : ''}de ${Fmt.brl(full)}` : '',
             showQty: !editing && selected && it.quantity > 1,
@@ -122,6 +144,14 @@ const App = {
             splitLabel: `${it.split} pessoas`,
             splitIncDisabled: it.split >= MAX_SPLIT
         };
+    },
+
+    itemMeta(it) {
+        const qty = it.quantity > 1 ? `${it.quantity} × ` : '';
+        if (it.discount > 0) {
+            return `${qty}${Fmt.brl(it.listUnitPrice)} · desconto −${Fmt.brl(it.discount)}`;
+        }
+        return `${qty}${Fmt.brl(it.unitPrice)}`;
     },
 
     footerView() {
@@ -142,7 +172,8 @@ const App = {
 
     totalDetail(t) {
         if (!t.any) return 'Toque nos itens que você consumiu';
-        return `itens ${Fmt.brl(t.subtotal)} + serviço ${Fmt.brl(t.tipAmount)}`;
+        const discount = t.myDiscount > 0.004 ? ` − desconto ${Fmt.brl(t.myDiscount)}` : '';
+        return `itens ${Fmt.brl(t.itemsAmount)}${discount} + serviço ${Fmt.brl(t.tipAmount)}`;
     },
 
     receiptView() {
@@ -440,9 +471,17 @@ const App = {
             const it = this.findItem(id);
             if (!it) return;
             const wasFull = it.sel > 0 && it.sel === it.quantity;
+            const unitDiscount = (it.discount || 0) / it.quantity;
+            if (Math.abs(price - it.unitPrice) > 0.004) {
+                // Preço corrigido à mão: passa a ser o preço pago, sem desconto separado
+                it.unitPrice = Fmt.round2(price);
+                it.listUnitPrice = it.unitPrice;
+                it.discount = 0;
+            } else {
+                it.discount = Fmt.round2(unitDiscount * qty);
+            }
             it.name = name;
             it.quantity = qty;
-            it.unitPrice = Fmt.round2(price);
             if (wasFull) it.sel = qty;
             it.sel = Math.min(it.sel, qty);
         } else {
@@ -451,6 +490,8 @@ const App = {
                 name,
                 quantity: qty,
                 unitPrice: Fmt.round2(price),
+                listUnitPrice: Fmt.round2(price),
+                discount: 0,
                 sel: 0,
                 split: 1
             });
@@ -510,11 +551,13 @@ const App = {
             if (it.quantity > 1 && it.sel < it.quantity) notes.push(`${it.sel} de ${it.quantity}`);
             else if (it.sel > 1) notes.push(`${it.sel}x`);
             if (it.split > 1) notes.push(`÷ ${it.split}`);
+            if (it.discount > 0) notes.push('c/ desconto');
             return {
                 label: notes.length ? `${it.name} (${notes.join(', ')})` : it.name,
                 value: Fmt.brl(this.itemShare(it))
             };
         });
+        if (t.myDiscount > 0.004) lines.push({ label: 'Desconto da conta (proporcional)', value: `−${Fmt.brl(t.myDiscount)}` });
         if (t.pct > 0) lines.push({ label: `Serviço ${Fmt.num(t.pct)}%`, value: Fmt.brl(t.tipAmount) });
 
         return {

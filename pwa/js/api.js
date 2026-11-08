@@ -115,13 +115,19 @@ const API = {
     transformReceiptData(dto) {
         const items = (dto.items || []).map((item, i) => {
             const quantity = Math.max(1, Math.round(Number(item.quantity) || 1));
-            let unitPrice = Number(item.unit_price) || 0;
-            if (!unitPrice && item.total_price) unitPrice = Number(item.total_price) / quantity;
+            const discount = Math.max(0, Number(item.discount) || 0);
+            let listUnitPrice = Number(item.unit_price) || 0;
+            const paid = Number.isFinite(Number(item.total_price)) && item.total_price !== null
+                ? Number(item.total_price)
+                : quantity * listUnitPrice - discount;
+            if (!listUnitPrice) listUnitPrice = (paid + discount) / quantity;
             return {
                 id: item.id || `item-${i}`,
                 name: String(item.name || 'Item').trim(),
                 quantity,
-                unitPrice,
+                unitPrice: Math.max(0, paid) / quantity, // preço pago por unidade (já com desconto)
+                listUnitPrice,                            // preço de tabela
+                discount,                                 // desconto do item (todas as unidades)
                 sel: 0,      // unidades que são "minhas"
                 split: 1     // com quantas pessoas divido
             };
@@ -133,6 +139,7 @@ const API = {
             date: dto.date || '',
             subtotal: Number(dto.subtotal) || 0,
             total: Number(dto.total) || 0,
+            discount: Math.max(0, Number(dto.discount) || 0), // desconto da conta, rateado
             items
         };
     }

@@ -6,8 +6,9 @@ class ReceiptItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
     quantity: int = 1
-    unit_price: float
-    total_price: float
+    unit_price: float          # preço de tabela, antes do desconto
+    total_price: float         # valor final pago (quantity × unit_price − discount)
+    discount: float = 0.0      # desconto aplicado a este item
     confidence: float = 0.0
 
 class ReceiptData(BaseModel):
@@ -16,6 +17,7 @@ class ReceiptData(BaseModel):
     items: List[ReceiptItem]
     subtotal: float
     total: float
+    discount: float = 0.0      # desconto da conta não atribuído a nenhum item
     confidence_score: float = 0.0
     establishment_name: Optional[str] = None
     date: Optional[str] = None

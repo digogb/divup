@@ -161,8 +161,9 @@ const Components = {
 
     checkStrip(check) {
         if (!check) return '';
+        const savings = check.savings ? ` (já com <strong>${check.savings}</strong> de desconto)` : '';
         if (check.ok) {
-            return `<div class="check-strip">${Icons.checkCircle}<span>Os itens somam <strong>${check.sum}</strong> — bate com o total da nota.</span></div>`;
+            return `<div class="check-strip">${Icons.checkCircle}<span>Os itens somam <strong>${check.sum}</strong>${savings} — bate com o total da nota.</span></div>`;
         }
         return `<div class="check-strip warn" role="status">${Icons.alert}<span>Os itens somam <strong>${check.sum}</strong>, mas a nota indica <strong>${check.expected}</strong>. Confira se faltou algum item.</span></div>`;
     },
@@ -311,7 +312,7 @@ const Components = {
                             <input id="fQty" name="qty" type="number" inputmode="numeric" min="1" max="99" step="1" value="${qty}" required>
                         </div>
                         <div class="field">
-                            <label for="fPrice">Preço unitário (R$)</label>
+                            <label for="fPrice">Preço pago por unidade (R$)</label>
                             <input id="fPrice" name="price" type="text" inputmode="decimal" autocomplete="off" value="${price}" placeholder="0,00" required>
                         </div>
                     </div>

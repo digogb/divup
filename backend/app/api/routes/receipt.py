@@ -32,7 +32,8 @@ def process_receipt(file: UploadFile = File(...)):
         # DEBUG: Verificar quantos itens estão sendo retornados
         print(f"\n📤 RESPOSTA HTTP: Enviando {len(receipt_data.items)} itens para o cliente")
         for idx, item in enumerate(receipt_data.items, 1):
-            print(f"   {idx}. {item.name[:40]} - {item.quantity}x R${item.unit_price:.2f}")
+            desc = f" (desc. R${item.discount:.2f})" if item.discount else ""
+            print(f"   {idx}. {item.name[:40]} - {item.quantity}x R${item.unit_price:.2f}{desc} = R${item.total_price:.2f}")
         print()
         
         return ProcessReceiptResponse(
