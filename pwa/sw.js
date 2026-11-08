@@ -1,11 +1,11 @@
-const CACHE_NAME = 'divup-v6';
+const CACHE_NAME = 'divup-v7';
 const urlsToCache = [
     '/',
     '/index.html',
-    '/css/styles.css?v=6',
-    '/js/app.js?v=6',
-    '/js/api.js?v=6',
-    '/js/components.js?v=6',
+    '/css/styles.css?v=7',
+    '/js/app.js?v=7',
+    '/js/api.js?v=7',
+    '/js/components.js?v=7',
     '/assets/icons/icon-192.png',
     '/assets/icons/icon.svg'
 ];

@@ -15,8 +15,13 @@ const Fmt = {
     round2(n) {
         return Math.round((n + Number.EPSILON) * 100) / 100;
     },
+    /** 1919.9 -> "1.919,90" (sem depender do suporte a locale do aparelho) */
+    money(n) {
+        const [int, dec] = Math.abs(Fmt.round2(n)).toFixed(2).split('.');
+        return (n < 0 ? '-' : '') + int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + dec;
+    },
     brl(n) {
-        return 'R$ ' + Fmt.round2(n).toFixed(2).replace('.', ',');
+        return 'R$ ' + Fmt.money(n);
     },
     num(n) {
         return String(Fmt.round2(n)).replace('.', ',');
@@ -27,6 +32,21 @@ const Fmt = {
         if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
         if (!/^\d*\.?\d+$|^\d+\.$/.test(s)) return NaN;
         return parseFloat(s);
+    },
+    /** "PICANHA NA CHAPA P/ 2" -> "Picanha na chapa p/ 2" */
+    sentenceCase(text) {
+        const s = String(text ?? '').toLowerCase();
+        return s.charAt(0).toUpperCase() + s.slice(1);
+    },
+    /** "WMB SUPERMERCADOS DO BRASIL" -> "WMB Supermercados do Brasil" */
+    titleCase(text) {
+        const small = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'em', 'na', 'no']);
+        return String(text ?? '').split(' ').map((w, i) => {
+            if (/^[A-Z]{2,4}$/.test(w) && !/[AEIOU]/.test(w)) return w; // siglas: WMB, LTD
+            const lw = w.toLowerCase();
+            if (i > 0 && small.has(lw)) return lw;
+            return lw.charAt(0).toUpperCase() + lw.slice(1);
+        }).join(' ');
     },
     plural(n, one, many) {
         return `${n} ${n === 1 ? one : many}`;

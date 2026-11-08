@@ -587,14 +587,44 @@ const App = {
         };
     },
 
+    /**
+     * Mensagem no estilo "recibo": bloco monoespaçado com valores alinhados.
+     * 28 colunas cabem sem quebrar de linha na maioria dos celulares.
+     */
     shareText() {
-        const v = this.shareView();
-        let text = `*${v.title}*\n`;
-        v.lines.forEach(l => { text += `${l.label} — ${l.value}\n`; });
-        text += `\n*Minha parte: ${v.total}*`;
-        const pixKey = (this.$('#pixKey')?.value ?? v.pixKey).trim();
-        const pixOn = this.$('#pixToggle')?.checked ?? v.pixOn;
-        if (pixOn && pixKey) text += `\nPix: ${pixKey}`;
+        const W = 28;
+        const r = this.state.receipt;
+        const t = this.totals();
+        const money = Fmt.money;
+        const clean = (s) => String(s).replace(/[`*_~]/g, '').replace(/\s+/g, ' ').trim();
+        const fit = (s, max) => (s.length <= max ? s : s.slice(0, Math.max(1, max - 1)).trimEnd() + '…');
+        const row = (label, value) => {
+            const left = fit(label, W - value.length - 1);
+            return left + ' '.repeat(Math.max(1, W - left.length - value.length)) + value;
+        };
+
+        const rows = r.items.filter(it => it.sel > 0).map(it => {
+            const notes = [];
+            if (it.quantity > 1 && it.sel < it.quantity) notes.push(`${it.sel}/${it.quantity}`);
+            else if (it.sel > 1) notes.push(`${it.sel}x`);
+            if (it.split > 1) notes.push(`÷${it.split}`);
+            const note = notes.length ? ' ' + notes.join(' ') : '';
+            const value = money(this.itemShare(it));
+            // Corta o nome, nunca as anotações (÷2, 2/4)
+            const name = fit(Fmt.sentenceCase(clean(it.name)), W - value.length - 1 - note.length);
+            return row(name + note, value);
+        });
+        if (t.myDiscount > 0.004) rows.push(row('Desconto da conta', '-' + money(t.myDiscount)));
+        if (t.pct > 0) rows.push(row(`Serviço ${Fmt.num(t.pct)}%`, money(t.tipAmount)));
+        rows.push('-'.repeat(W));
+        rows.push(row('MINHA PARTE', Fmt.brl(t.total)));
+
+        const title = `🧾 *${Fmt.titleCase(clean(r.title))}*` + (r.date ? ` · ${r.date}` : '');
+        let text = `${title}\n\n\`\`\`\n${rows.join('\n')}\n\`\`\``;
+
+        const pixKey = (this.$('#pixKey')?.value ?? STORAGE.get('divup.pixKey', '')).trim();
+        const pixOn = this.$('#pixToggle')?.checked ?? STORAGE.get('divup.pixOn', '0') === '1';
+        if (pixOn && pixKey) text += `\n\nPix: ${clean(pixKey)}`;
         return text;
     },
 
