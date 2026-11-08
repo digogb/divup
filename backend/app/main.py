@@ -21,6 +21,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def cache_headers(request, call_next):
+    """
+    Controla cache da PWA (inclusive no Cloudflare, que sem isso guarda .js por 4h):
+    - HTML, JS, CSS, service worker e manifest: sempre revalidar (ETag torna barato).
+    - Ícones: podem ficar em cache por 7 dias.
+    - API: nunca em cache.
+    """
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    elif path.startswith("/assets/"):
+        response.headers["Cache-Control"] = "public, max-age=604800"
+    elif path in ("/", "/index.html", "/sw.js", "/manifest.json") or path.startswith(("/js/", "/css/")):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 # Rotas da API
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 

@@ -119,4 +119,6 @@ docker restart divup-api-dev
 docker-compose up -d --build api
 ```
 
+> 📱 **Mudou algo na PWA?** Suba o número de versão `?v=N` em `pwa/index.html` (CSS, JS e `sw.js`) e o `CACHE_NAME`/URLs em `pwa/sw.js`. Sem isso, o Cloudflare e os celulares podem continuar com os arquivos antigos.
+
 > ⚠️ O `docker-compose` 1.29 do Ubuntu 22.04 falha ao recriar containers (`KeyError: 'ContainerConfig'`) e deixa o app fora do ar. Se acontecer: `docker ps -a` para achar o container antigo parado, `docker rm <ID>` e `docker-compose up -d`. A solução definitiva é instalar o Compose v2 (`sudo apt install docker-compose-v2` e usar `docker compose`).
