@@ -1,4 +1,4 @@
-const CACHE_NAME = 'divup-v4';
+const CACHE_NAME = 'divup-v5';
 const urlsToCache = [
     '/',
     '/index.html',

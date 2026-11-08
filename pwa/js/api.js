@@ -10,73 +10,114 @@ const API = {
         ? 'http://164.152.197.117:8001' 
         : '',
     
-    /**
-     * Process a receipt image
-     * @param {File} imageFile - The image file to process
-     * @returns {Promise<Object>} - The processed receipt data
-     */
-    // Compression settings: enough resolution to read a receipt,
-    // shrinks a 3-8MB phone photo to a few hundred KB.
+    // Compressão: resolução suficiente para ler a nota; uma foto de 3-8 MB vira ~200 KB.
     MAX_IMAGE_SIDE: 1600,
     JPEG_QUALITY: 0.8,
+    // Fotos JPEG já pequenas vão direto (o servidor reduz se precisar).
+    SKIP_BELOW_BYTES: 400 * 1024,
+    // Se o aparelho demorar mais que isso para comprimir, envia a original.
+    COMPRESS_TIMEOUT_MS: 3000,
 
     /**
-     * Downscale and re-encode an image as JPEG before upload.
-     * Falls back to the original file if anything fails.
-     * @param {File} file
-     * @returns {Promise<File>}
+     * Reduz e recomprime a foto antes do upload.
+     * Nunca falha: em erro ou demora, devolve o arquivo original.
+     * @returns {Promise<{file: File, info: Object}>}
      */
     async compressImage(file) {
-        const url = URL.createObjectURL(file);
+        const t0 = performance.now();
+        const info = { kb_in: Math.round(file.size / 1024), type: file.type || '?', method: 'skip' };
+        const done = (out) => {
+            info.ms = Math.round(performance.now() - t0);
+            info.kb_out = Math.round(out.size / 1024);
+            return { file: out, info };
+        };
+
+        if (file.type === 'image/jpeg' && file.size <= this.SKIP_BELOW_BYTES) return done(file);
+
+        const timeout = new Promise(resolve => setTimeout(() => resolve(null), this.COMPRESS_TIMEOUT_MS));
         try {
-            // <img> applies EXIF orientation automatically in modern browsers
-            const img = await new Promise((resolve, reject) => {
+            const blob = await Promise.race([this.resizeToJpeg(file, info), timeout]);
+            if (!blob) {
+                info.method += '+timeout';
+                return done(file);
+            }
+            if (blob.size >= file.size) return done(file);
+            return done(new File([blob], 'receipt.jpg', { type: 'image/jpeg' }));
+        } catch (error) {
+            console.warn('Falha ao comprimir imagem, enviando original:', error);
+            info.method += '+erro';
+            return done(file);
+        }
+    },
+
+    /** Decodifica (fora da thread principal quando possível), reduz e gera JPEG. */
+    async resizeToJpeg(file, info) {
+        let source = null;
+        let width, height;
+
+        // createImageBitmap decodifica em segundo plano e não trava a tela
+        if (typeof createImageBitmap === 'function') {
+            try {
+                source = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                width = source.width;
+                height = source.height;
+                info.method = 'bitmap';
+            } catch { source = null; }
+        }
+
+        let url = null;
+        if (!source) {
+            url = URL.createObjectURL(file);
+            source = await new Promise((resolve, reject) => {
                 const el = new Image();
+                el.decoding = 'async';
                 el.onload = () => resolve(el);
                 el.onerror = reject;
                 el.src = url;
             });
+            width = source.naturalWidth;
+            height = source.naturalHeight;
+            info.method = 'img';
+        }
 
-            const scale = Math.min(1, this.MAX_IMAGE_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
-            const width = Math.round(img.naturalWidth * scale);
-            const height = Math.round(img.naturalHeight * scale);
-
+        try {
+            info.px = `${width}x${height}`;
+            const scale = Math.min(1, this.MAX_IMAGE_SIDE / Math.max(width, height));
+            const w = Math.round(width * scale);
+            const h = Math.round(height * scale);
             const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = w;
+            canvas.height = h;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#fff'; // PNG transparency -> white
-            ctx.fillRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0, width, height);
-
-            const blob = await new Promise(resolve =>
-                canvas.toBlob(resolve, 'image/jpeg', this.JPEG_QUALITY)
-            );
-            if (!blob || blob.size >= file.size) return file;
-
-            console.log(`Imagem comprimida: ${Math.round(file.size / 1024)} KB -> ${Math.round(blob.size / 1024)} KB`);
-            return new File([blob], 'receipt.jpg', { type: 'image/jpeg' });
-        } catch (error) {
-            console.warn('Falha ao comprimir imagem, enviando original:', error);
-            return file;
+            ctx.fillStyle = '#fff'; // transparência de PNG -> branco
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(source, 0, 0, w, h);
+            return await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', this.JPEG_QUALITY));
         } finally {
-            URL.revokeObjectURL(url);
+            source.close?.();
+            if (url) URL.revokeObjectURL(url);
         }
     },
 
     /**
      * Envia a foto e devolve a nota no formato do app.
      * @param {File} imageFile
-     * @param {{signal?: AbortSignal, onProgress?: (step: number) => void}} options
-     *        onProgress(1) quando a foto já foi otimizada e o upload começou.
+     * @param {{signal?: AbortSignal, onProgress?: (step: number) => void, onPhoto?: (file: File) => void}} options
+     *        onProgress(1): foto otimizada, upload começando.
+     *        onPhoto(file): arquivo leve para a pré-visualização.
      */
-    async processReceipt(imageFile, { signal, onProgress } = {}) {
-        const uploadFile = await this.compressImage(imageFile);
+    async processReceipt(imageFile, { signal, onProgress, onPhoto } = {}) {
+        const { file: uploadFile, info } = await this.compressImage(imageFile);
         if (signal?.aborted) throw new DOMException('Cancelado', 'AbortError');
+        onPhoto?.(uploadFile);
         onProgress?.(1);
+
+        // Diagnóstico de desempenho no log do servidor (sem dados pessoais)
+        info.ua = navigator.userAgent.slice(0, 160);
 
         const formData = new FormData();
         formData.append('file', uploadFile);
+        formData.append('client_info', JSON.stringify(info));
 
         let response;
         try {

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from app.models.receipt import ProcessReceiptResponse
 from app.services.receipt_service import ReceiptService
 from app.core.config import settings
@@ -8,7 +8,7 @@ router = APIRouter()
 receipt_service = ReceiptService()
 
 @router.post("/process", response_model=ProcessReceiptResponse)
-def process_receipt(file: UploadFile = File(...)):
+def process_receipt(file: UploadFile = File(...), client_info: str | None = Form(None)):
     """
     Processa imagem de nota fiscal.
 
@@ -25,6 +25,9 @@ def process_receipt(file: UploadFile = File(...)):
 
     try:
         content = file.file.read()
+        if client_info:
+            # Diagnóstico enviado pela PWA: tempo de compressão no aparelho, tamanhos, user agent
+            print(f"📱 Cliente: {client_info[:400]}")
 
         # Processar OCR
         receipt_data, processing_time = receipt_service.process_receipt_image(content)

@@ -329,15 +329,21 @@ const App = {
     // Fluxo: foto -> leitura -> divisão
     // =====================================================
     async handleImageSelected(file) {
-        const photoUrl = URL.createObjectURL(file);
+        // A pré-visualização usa a foto já reduzida: abrir a original aqui
+        // dobraria o trabalho de decodificação no celular.
+        let photoUrl = null;
         const controller = new AbortController();
-        this.state.loading = { step: 0, photoUrl, controller };
+        this.state.loading = { step: 0, photoUrl: null, controller };
         this.go('loading');
 
         try {
             const receipt = await API.processReceipt(file, {
                 signal: controller.signal,
-                onProgress: (step) => this.setLoadingStep(step)
+                onProgress: (step) => this.setLoadingStep(step),
+                onPhoto: (small) => {
+                    photoUrl = URL.createObjectURL(small);
+                    this.showLoadingPhoto(photoUrl);
+                }
             });
             if (controller.signal.aborted) return;
 
@@ -357,8 +363,19 @@ const App = {
             this.state.errorMessage = error.message || 'Tente fotografar de novo, com a nota inteira e bem iluminada.';
             this.go('error');
         } finally {
-            URL.revokeObjectURL(photoUrl);
+            if (photoUrl) URL.revokeObjectURL(photoUrl);
         }
+    },
+
+    showLoadingPhoto(url) {
+        if (this.state.screen !== 'loading') return;
+        this.state.loading.photoUrl = url;
+        const box = this.$('.loading-photo');
+        if (!box || box.querySelector('img')) return;
+        const img = document.createElement('img');
+        img.alt = '';
+        img.src = url;
+        box.prepend(img);
     },
 
     setLoadingStep(step) {
