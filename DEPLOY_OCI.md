@@ -93,12 +93,30 @@ Se ver a documentação do Swagger, parabéns! O DivUp está online. 🎉
 
 ---
 
+## 🔐 HTTPS (Cloudflare Tunnel)
+
+Em produção o app é acessado por **https://divup.rglabs.tech**, via Cloudflare Tunnel (serviço `cloudflared` no `docker-compose.yml`). Não é preciso abrir as portas 80/443.
+
+- Túnel `divup` no painel Cloudflare Zero Trust, com rota `divup.rglabs.tech` → `http://api:8001` (use o nome do serviço, não `localhost`).
+- O token fica em `~/divup/.env` como `CLOUDFLARE_TUNNEL_TOKEN=...`.
+- Subir só o túnel: `docker-compose up -d --no-deps cloudflared`.
+- A porta 8001 continua aberta porque o app Android ainda usa `http://IP:8001`.
+
+> Um subdomínio recém-criado pode demorar até 30 min para abrir em redes que consultaram o nome antes de ele existir (cache negativo do DNS da operadora).
+
+---
+
 ## 🔄 Atualizando o Código
 
-Para atualizar a versão em produção no futuro:
+O código (`backend/app`) e a PWA (`pwa/`) são montados como volume no container, então:
 
 ```bash
 cd ~/divup
 git pull
-docker-compose up -d --build
+# Mudou só código Python ou PWA:
+docker restart divup-api-dev
+# Mudou requirements.txt ou Dockerfile:
+docker-compose up -d --build api
 ```
+
+> ⚠️ O `docker-compose` 1.29 do Ubuntu 22.04 falha ao recriar containers (`KeyError: 'ContainerConfig'`) e deixa o app fora do ar. Se acontecer: `docker ps -a` para achar o container antigo parado, `docker rm <ID>` e `docker-compose up -d`. A solução definitiva é instalar o Compose v2 (`sudo apt install docker-compose-v2` e usar `docker compose`).
