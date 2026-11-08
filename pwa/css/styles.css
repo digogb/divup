@@ -153,7 +153,15 @@ svg { flex-shrink: 0; }
     margin: 0 auto;
 }
 
-.home-hero { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+.home-hero {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    /* O cartão se adapta à altura que sobrar (ex.: com "Ver histórico" na tela) */
+    container-type: size;
+}
 
 .mini-receipt {
     width: 264px;
@@ -174,7 +182,14 @@ svg { flex-shrink: 0; }
 .mini-total { border-top: 1.5px dashed var(--dash); margin-top: 4px; padding: 10px 8px 0; display: flex; justify-content: space-between; align-items: baseline; color: var(--muted); }
 .mini-total strong { font-family: var(--font-display); font-size: 18px; color: var(--accent); }
 
-@media (max-height: 640px) { .home-hero { display: none; } }
+/* Cartão tem ~310px de altura: encolhe quando aperta e some quando não cabe */
+@container (max-height: 340px) { .mini-receipt { transform: rotate(-2.5deg) scale(0.82); } }
+@container (max-height: 280px) { .mini-receipt { transform: rotate(-2deg) scale(0.66); } }
+@container (max-height: 220px) { .mini-receipt { display: none; } }
+/* Navegadores sem container queries: some em telas baixas */
+@supports not (container-type: size) {
+    @media (max-height: 760px) { .home-hero { visibility: hidden; } }
+}
 
 .home-copy h1 { font-family: var(--font-display); font-weight: 700; font-size: 32px; line-height: 1.08; letter-spacing: -0.025em; }
 .home-copy p { margin-top: 10px; font-size: 16px; line-height: 1.5; color: var(--muted); }
