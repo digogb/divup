@@ -19,13 +19,18 @@ const STORAGE = {
 
 const App = {
     state: {
-        screen: 'home',          // 'home' | 'loading' | 'receipt' | 'error'
+        screen: 'home',          // 'home' | 'loading' | 'receipt' | 'history' | 'error'
         receipt: null,           // { title, date, subtotal, total, items: [{ id, name, quantity, unitPrice, sel, split }] }
         tip: { mode: 'preset', preset: 10, custom: '' },
         editing: false,
         loading: { step: 0, photoUrl: null, controller: null },
         errorMessage: '',
-        sheet: null              // null | { type: 'share' } | { type: 'item', id: string|null }
+        sheet: null,             // null | { type: 'share' } | { type: 'item', id } | { type: 'account' }
+        user: null,              // { email, name, picture } quando logado
+        authConfig: null,        // { google_client_id }
+        account: { confirmDelete: false, error: '' },
+        history: { loading: false, error: '', items: [], pendingDelete: null },
+        lastSaved: ''            // evita salvar de novo uma conta sem mudanças
     },
 
     root: null,
@@ -39,7 +44,12 @@ const App = {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.state.sheet) this.closeSheet();
         });
+        // Fechou ou trocou de app no meio da divisão: salva no histórico
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') this.saveToHistory({ keepalive: true });
+        });
         this.render();
+        this.loadSession();
     },
 
     // =====================================================
@@ -49,7 +59,8 @@ const App = {
         const s = this.state;
         let html = '';
         switch (s.screen) {
-            case 'home': html = Components.homeScreen(); break;
+            case 'home': html = Components.homeScreen(s.user); break;
+            case 'history': html = Components.historyScreen(this.historyView()); break;
             case 'loading': html = Components.loadingScreen(s.loading.photoUrl, s.loading.step); break;
             case 'receipt': html = Components.receiptScreen(this.receiptView()); break;
             case 'error': html = Components.errorScreen(s.errorMessage); break;
@@ -281,7 +292,7 @@ const App = {
             case 'edit-item': this.openSheet({ type: 'item', id }); break;
             case 'add-item': this.openSheet({ type: 'item', id: null }); break;
             case 'delete-item': this.deleteItem(id); break;
-            case 'open-share': this.openSheet({ type: 'share' }); break;
+            case 'open-share': this.saveToHistory(); this.openSheet({ type: 'share' }); break;
 
             // Sheets
             case 'close-sheet': this.closeSheet(); break;
@@ -291,6 +302,17 @@ const App = {
 
             // Erro
             case 'retry': this.go('home'); break;
+
+            // Conta e histórico
+            case 'open-account': this.openSheet({ type: 'account' }); break;
+            case 'open-history': this.openHistory(); break;
+            case 'go-home': this.go('home'); break;
+            case 'open-saved': this.openSaved(id); break;
+            case 'delete-saved': this.deleteSaved(id); break;
+            case 'logout': this.logout(); break;
+            case 'delete-account': this.setAccount({ confirmDelete: true, error: '' }); break;
+            case 'delete-account-cancel': this.setAccount({ confirmDelete: false, error: '' }); break;
+            case 'delete-account-confirm': this.deleteAccount(); break;
         }
     },
 
@@ -391,6 +413,7 @@ const App = {
     },
 
     newReceipt() {
+        this.saveToHistory();
         this.state.receipt = null;
         this.state.editing = false;
         this.go('home');
@@ -548,6 +571,9 @@ const App = {
             const item = sheet.id ? this.findItem(sheet.id) : null;
             root.innerHTML = Components.itemSheet(item);
             this.$('#fName')?.focus();
+        } else if (sheet.type === 'account') {
+            root.innerHTML = Components.accountSheet(this.accountView());
+            if (!this.state.user) this.renderGoogleButton();
         }
     },
 
@@ -583,7 +609,8 @@ const App = {
             total: Fmt.brl(t.total),
             pixOn: STORAGE.get('divup.pixOn', '0') === '1',
             pixKey: STORAGE.get('divup.pixKey', ''),
-            canNativeShare: typeof navigator.share === 'function'
+            canNativeShare: typeof navigator.share === 'function',
+            loggedIn: !!this.state.user
         };
     },
 
@@ -657,6 +684,274 @@ const App = {
         } catch (err) {
             if (err.name !== 'AbortError') this.toast('Não foi possível compartilhar');
         }
+    },
+
+    // =====================================================
+    // Conta (login com Google)
+    // =====================================================
+    async loadSession() {
+        try {
+            const [me, config] = await Promise.all([API.me(), API.authConfig()]);
+            this.state.user = me.user;
+            this.state.authConfig = config;
+            if (this.state.screen === 'home' && !this.state.sheet) this.render();
+        } catch (error) {
+            console.warn('Sessão indisponível:', error);
+        }
+    },
+
+    accountView() {
+        return {
+            user: this.state.user,
+            configured: !!this.state.authConfig?.google_client_id,
+            confirmDelete: this.state.account.confirmDelete,
+            error: this.state.account.error
+        };
+    },
+
+    setAccount(patch) {
+        Object.assign(this.state.account, patch);
+        if (this.state.sheet?.type === 'account') this.openSheet({ type: 'account' });
+    },
+
+    loadGis() {
+        if (window.google?.accounts?.id) return Promise.resolve();
+        if (!this.gisPromise) {
+            this.gisPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://accounts.google.com/gsi/client';
+                script.async = true;
+                script.onload = () => resolve();
+                script.onerror = () => { this.gisPromise = null; reject(new Error('gis')); };
+                document.head.appendChild(script);
+            });
+        }
+        return this.gisPromise;
+    },
+
+    async renderGoogleButton() {
+        try {
+            if (!this.state.authConfig) this.state.authConfig = await API.authConfig();
+            const clientId = this.state.authConfig.google_client_id;
+            if (!clientId) return;
+            await this.loadGis();
+            const el = this.$('#googleButton');
+            if (!el) return;
+            if (!this.gisReady) {
+                google.accounts.id.initialize({
+                    client_id: clientId,
+                    callback: (response) => this.onGoogleCredential(response.credential),
+                    ux_mode: 'popup',
+                    context: 'signin',
+                    itp_support: true
+                });
+                this.gisReady = true;
+            }
+            el.innerHTML = '';
+            const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+            google.accounts.id.renderButton(el, {
+                type: 'standard',
+                theme: dark ? 'filled_black' : 'outline',
+                size: 'large',
+                text: 'continue_with',
+                shape: 'pill',
+                logo_alignment: 'center',
+                width: Math.min(Math.max(el.clientWidth, 240), 400),
+                locale: 'pt-BR'
+            });
+        } catch (error) {
+            console.warn('Login do Google indisponível:', error);
+            this.setAccount({ error: 'Não foi possível carregar o login do Google. Verifique sua conexão.' });
+        }
+    },
+
+    async onGoogleCredential(credential) {
+        try {
+            const { user } = await API.loginGoogle(credential);
+            this.state.user = user;
+            this.state.account = { confirmDelete: false, error: '' };
+            this.closeSheet();
+            this.toast(`Olá, ${(user.name || user.email).split(' ')[0]}!`);
+            if (this.state.screen === 'home') this.render();
+            if (this.state.screen === 'receipt') this.saveToHistory();
+        } catch (error) {
+            this.setAccount({ error: error.message });
+        }
+    },
+
+    async logout() {
+        try { await API.logout(); } catch { /* sai localmente mesmo assim */ }
+        window.google?.accounts?.id?.disableAutoSelect?.();
+        this.state.user = null;
+        this.state.history = { loading: false, error: '', items: [], pendingDelete: null };
+        this.closeSheet();
+        if (this.state.screen === 'home' || this.state.screen === 'history') this.go('home');
+        this.toast('Você saiu da conta');
+    },
+
+    async deleteAccount() {
+        try {
+            await API.deleteAccount();
+            window.google?.accounts?.id?.disableAutoSelect?.();
+            this.state.user = null;
+            this.state.account = { confirmDelete: false, error: '' };
+            this.state.history = { loading: false, error: '', items: [], pendingDelete: null };
+            this.go('home');
+            this.toast('Conta e histórico excluídos');
+        } catch (error) {
+            this.setAccount({ error: error.message });
+        }
+    },
+
+    // =====================================================
+    // Histórico
+    // =====================================================
+    historyEntry() {
+        const r = this.state.receipt;
+        return {
+            id: r.id,
+            title: r.title,
+            date: r.date || '',
+            subtotal: r.subtotal || 0,
+            total: r.total || 0,
+            discount: r.discount || 0,
+            items: r.items.map(it => ({
+                id: String(it.id),
+                name: it.name,
+                quantity: it.quantity,
+                unitPrice: it.unitPrice,
+                listUnitPrice: it.listUnitPrice || it.unitPrice,
+                discount: it.discount || 0,
+                sel: it.sel,
+                split: it.split
+            })),
+            tip: { ...this.state.tip, custom: String(this.state.tip.custom || '') },
+            my_total: Fmt.round2(this.totals().total)
+        };
+    },
+
+    /** Salva a conta atual se houver login e algo marcado. Silencioso em caso de erro. */
+    async saveToHistory({ keepalive = false } = {}) {
+        const r = this.state.receipt;
+        if (!this.state.user || !r || this.state.screen !== 'receipt') return;
+        if (!r.items.some(it => it.sel > 0)) return;
+        const entry = this.historyEntry();
+        const json = JSON.stringify(entry);
+        if (json === this.state.lastSaved) return;
+        try {
+            await API.saveHistory(entry, { keepalive });
+            this.state.lastSaved = json;
+        } catch (error) {
+            console.warn('Não foi possível salvar no histórico:', error);
+            if (error.status === 401) this.state.user = null;
+        }
+    },
+
+    async openHistory() {
+        if (!this.state.user) return this.openSheet({ type: 'account' });
+        await this.saveToHistory();
+        this.state.history = { loading: true, error: '', items: [], pendingDelete: null };
+        this.go('history');
+        try {
+            const { receipts } = await API.listHistory();
+            this.state.history = { loading: false, error: '', items: receipts, pendingDelete: null };
+        } catch (error) {
+            if (error.status === 401) {
+                this.state.user = null;
+                return this.go('home');
+            }
+            this.state.history = { loading: false, error: error.message, items: [], pendingDelete: null };
+        }
+        if (this.state.screen === 'history') this.render();
+    },
+
+    historyView() {
+        const h = this.state.history;
+        const months = new Map();
+        for (const r of h.items) {
+            const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(r.date || '');
+            const key = m ? `${m[3]}-${m[2]}` : (r.created_at || '').slice(0, 7);
+            if (!months.has(key)) months.set(key, []);
+            const created = (r.created_at || '').slice(0, 10).split('-').reverse().join('/');
+            months.get(key).push({
+                id: r.id,
+                title: Fmt.titleCase(r.title),
+                date: r.date || created,
+                total: Fmt.brl(r.my_total),
+                amount: r.my_total,
+                pending: h.pendingDelete === r.id
+            });
+        }
+        const groups = [...months.entries()]
+            .sort((a, b) => b[0].localeCompare(a[0]))
+            .map(([key, rows]) => {
+                const [y, mo] = key.split('-').map(Number);
+                let label = key;
+                if (y && mo) {
+                    label = new Date(y, mo - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                    label = label.charAt(0).toUpperCase() + label.slice(1);
+                }
+                return { label, total: Fmt.brl(rows.reduce((acc, r) => acc + r.amount, 0)), rows };
+            });
+        return { loading: h.loading, error: h.error, groups };
+    },
+
+    async openSaved(id) {
+        try {
+            const saved = await API.getHistory(id);
+            const p = saved.payload;
+            this.state.receipt = {
+                id: p.id,
+                title: p.title,
+                date: p.date,
+                subtotal: p.subtotal,
+                total: p.total,
+                discount: p.discount || 0,
+                items: p.items.map(it => ({ ...it, listUnitPrice: it.listUnitPrice || it.unitPrice, discount: it.discount || 0 }))
+            };
+            this.state.tip = { mode: p.tip.mode, preset: p.tip.preset, custom: p.tip.custom || '' };
+            this.state.editing = false;
+            this.state.lastSaved = JSON.stringify(this.historyEntry());
+            this.go('receipt');
+        } catch (error) {
+            this.toast(error.message || 'Não foi possível abrir essa conta');
+        }
+    },
+
+    /** Primeiro toque arma ("Apagar"), segundo toque apaga. */
+    async deleteSaved(id) {
+        const h = this.state.history;
+        if (h.pendingDelete !== id) {
+            h.pendingDelete = id;
+            clearTimeout(this.deleteTimer);
+            this.deleteTimer = setTimeout(() => {
+                if (h.pendingDelete === id) { h.pendingDelete = null; this.refreshHistoryList(); }
+            }, 4000);
+            this.refreshHistoryList();
+            this.root.querySelector(`.history-delete[data-id="${CSS.escape(id)}"]`)?.focus();
+            return;
+        }
+        h.pendingDelete = null;
+        h.items = h.items.filter(r => r.id !== id);
+        this.refreshHistoryList();
+        try {
+            await API.deleteHistory(id);
+            this.toast('Conta apagada do histórico');
+        } catch (error) {
+            this.toast('Não foi possível apagar. Tente de novo.');
+            this.openHistory();
+        }
+    },
+
+    refreshHistoryList() {
+        if (this.state.screen !== 'history') return;
+        const list = this.$('#historyList');
+        if (!list) return;
+        const scroll = list.scrollTop;
+        const tmp = document.createElement('div');
+        tmp.innerHTML = Components.historyScreen(this.historyView());
+        list.innerHTML = tmp.querySelector('#historyList').innerHTML;
+        list.scrollTop = scroll;
     },
 
     toast(message) {

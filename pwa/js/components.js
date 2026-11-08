@@ -75,6 +75,9 @@ const Icons = {
     pencil: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>`,
     chat: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>`,
     copy: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>`,
+    history: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>`,
+    trash: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>`,
+    chevron: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`,
     more: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>`
 };
 
@@ -83,10 +86,20 @@ const Components = {
     // ========================
     // Início
     // ========================
-    homeScreen() {
+    avatar(user, size = 36) {
+        const initial = Fmt.esc((user.name || user.email || '?').trim().charAt(0).toUpperCase());
+        return `<span class="avatar" style="width:${size}px;height:${size}px">${initial}</span>`;
+    },
+
+    homeScreen(user) {
         return `
             <main class="screen home">
-                <div class="brand">${Icons.logo}<span class="brand-name">divup</span></div>
+                <div class="home-top">
+                    <div class="brand">${Icons.logo}<span class="brand-name">divup</span></div>
+                    ${user
+                        ? `<button class="icon-btn" data-action="open-account" aria-label="Sua conta">${this.avatar(user)}</button>`
+                        : `<button class="btn-text" data-action="open-account">Entrar</button>`}
+                </div>
 
                 <div class="home-hero" aria-hidden="true">
                     <div class="mini-receipt">
@@ -110,8 +123,10 @@ const Components = {
                     <input type="file" id="galleryInput" class="file-input" accept="image/*">
                     <button class="btn btn-primary" data-action="camera">${Icons.camera}Fotografar conta</button>
                     <button class="btn btn-secondary" data-action="gallery">${Icons.gallery}Escolher da galeria</button>
+                    ${user ? `<button class="btn-text home-history" data-action="open-history">${Icons.history}Ver histórico</button>` : ''}
                 </div>
             </main>
+            <div id="sheetRoot"></div>
         `;
     },
 
@@ -294,6 +309,10 @@ const Components = {
                         <input id="pixKey" type="text" autocomplete="off" value="${Fmt.esc(s.pixKey)}" placeholder="CPF, e-mail, telefone ou chave aleatória">
                     </div>
 
+                    ${s.loggedIn
+                        ? `<p class="sheet-note">${Icons.checkSmall} Esta conta fica salva no seu histórico.</p>`
+                        : `<button class="btn-text" data-action="open-account">${Icons.history}Entre com Google para guardar suas contas</button>`}
+
                     <div class="sheet-actions">
                         <button class="btn btn-primary" data-action="share-whatsapp">${Icons.chat}Enviar no WhatsApp</button>
                         <button class="btn btn-secondary" data-action="share-copy">${Icons.copy}Copiar texto</button>
@@ -344,6 +363,115 @@ const Components = {
                     </div>
                 </form>
             </div>
+        `;
+    },
+
+    // ========================
+    // Sheet: conta
+    // ========================
+    accountSheet(v) {
+        let body;
+        if (!v.user) {
+            body = `
+                <div class="sheet-head">
+                    <h2 id="accountTitle">Entrar</h2>
+                    <button class="icon-btn" data-action="close-sheet" aria-label="Fechar">${Icons.close}</button>
+                </div>
+                <p class="sheet-text">Guarde as contas que você dividir e veja quanto gastou em cada mês.</p>
+                ${v.configured
+                    ? `<div class="google-btn" id="googleButton" aria-live="polite"><span class="sheet-text">Carregando…</span></div>`
+                    : `<p class="field-error">O login está indisponível no momento.</p>`}
+                ${v.error ? `<p class="field-error" role="alert">${Fmt.esc(v.error)}</p>` : ''}
+                <p class="sheet-fine">Guardamos só o nome do local, a data, os itens e os valores. Nunca a foto da nota.</p>
+            `;
+        } else if (v.confirmDelete) {
+            body = `
+                <div class="sheet-head">
+                    <h2 id="accountTitle">Excluir conta?</h2>
+                    <button class="icon-btn" data-action="close-sheet" aria-label="Fechar">${Icons.close}</button>
+                </div>
+                <p class="sheet-text">Isso apaga sua conta e todo o histórico de ${Fmt.esc(v.user.email)}. Não dá para desfazer.</p>
+                ${v.error ? `<p class="field-error" role="alert">${Fmt.esc(v.error)}</p>` : ''}
+                <div class="sheet-actions">
+                    <button class="btn btn-danger-solid" data-action="delete-account-confirm">Excluir tudo</button>
+                    <button class="btn btn-secondary" data-action="delete-account-cancel">Cancelar</button>
+                </div>
+            `;
+        } else {
+            body = `
+                <div class="sheet-head">
+                    <h2 id="accountTitle">Sua conta</h2>
+                    <button class="icon-btn" data-action="close-sheet" aria-label="Fechar">${Icons.close}</button>
+                </div>
+                <div class="account-card">
+                    ${this.avatar(v.user, 48)}
+                    <div class="account-info">
+                        <strong>${Fmt.esc(v.user.name || 'Você')}</strong>
+                        <span>${Fmt.esc(v.user.email)}</span>
+                    </div>
+                </div>
+                <div class="sheet-actions">
+                    <button class="btn btn-primary" data-action="open-history">${Icons.history}Ver histórico</button>
+                    <button class="btn btn-secondary" data-action="logout">Sair</button>
+                    <button class="btn-text btn-danger" data-action="delete-account">Excluir minha conta e dados</button>
+                </div>
+            `;
+        }
+        return `
+            <div class="sheet-scrim" data-action="close-sheet">
+                <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+                    <div class="sheet-handle"></div>
+                    ${body}
+                </section>
+            </div>
+        `;
+    },
+
+    // ========================
+    // Histórico
+    // ========================
+    historyScreen(v) {
+        let content;
+        if (v.loading) {
+            content = `<p class="history-empty">Carregando…</p>`;
+        } else if (v.error) {
+            content = `<div class="history-empty"><span>${Fmt.esc(v.error)}</span>
+                       <button class="btn btn-secondary" data-action="open-history">Tentar de novo</button></div>`;
+        } else if (!v.groups.length) {
+            content = `<div class="history-empty">
+                           <strong>Nenhuma conta salva ainda</strong>
+                           <span>As contas que você dividir aparecem aqui.</span>
+                       </div>`;
+        } else {
+            content = v.groups.map(g => `
+                <section class="history-group" aria-label="${Fmt.esc(g.label)}">
+                    <div class="history-month"><span>${Fmt.esc(g.label)}</span><strong>${g.total}</strong></div>
+                    ${g.rows.map(r => `
+                        <div class="history-row">
+                            <button class="history-open" data-action="open-saved" data-id="${Fmt.esc(r.id)}">
+                                <span class="history-text">
+                                    <span class="history-title">${Fmt.esc(r.title)}</span>
+                                    <span class="history-date">${Fmt.esc(r.date)}</span>
+                                </span>
+                                <span class="history-total">${r.total}</span>
+                                ${Icons.chevron}
+                            </button>
+                            <button class="icon-btn history-delete ${r.pending ? 'is-pending' : ''}" data-action="delete-saved" data-id="${Fmt.esc(r.id)}" aria-label="${r.pending ? 'Confirmar: apagar' : 'Apagar'} ${Fmt.esc(r.title)} do histórico">${r.pending ? 'Apagar' : Icons.trash}</button>
+                        </div>
+                    `).join('')}
+                </section>
+            `).join('');
+        }
+
+        return `
+            <main class="screen history">
+                <header class="receipt-top">
+                    <button class="icon-btn" data-action="go-home" aria-label="Voltar">${Icons.back}</button>
+                    <div class="receipt-title"><strong>Histórico</strong><span>Sua parte em cada conta</span></div>
+                </header>
+                <div class="history-list" id="historyList">${content}</div>
+            </main>
+            <div id="sheetRoot"></div>
         `;
     },
 

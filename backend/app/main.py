@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from app.api.routes import api_router
 from app.core.config import settings
+from app.core.db import init_db
 import os
 
 app = FastAPI(
@@ -12,14 +13,20 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS para desenvolvimento local e PWA
+# CORS: com login por cookie, só o próprio app pode chamar a API com credenciais.
+# (O app Android não é navegador e não é afetado por CORS.)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Aceitar qualquer origem (PWA, localhost, etc)
+    allow_origins=[o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type"],
 )
+
+
+@app.on_event("startup")
+def startup():
+    init_db()
 
 @app.middleware("http")
 async def cache_headers(request, call_next):

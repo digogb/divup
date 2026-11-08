@@ -52,6 +52,8 @@ O fluxo principal consiste em:
 - `main.py`: Entrypoint da API.
 - `api/routes/receipt.py`: Endpoint `POST /api/v1/receipt/process` que recebe a imagem (rota síncrona `def`, roda em threadpool).
 - `core/ocr/gemini_vision.py`: **Core Logic**. Contém o prompt enviado ao Gemini para extração JSON (Itens, Data, Local).
+- `api/routes/auth.py` / `history.py`: login com Google (ID token verificado no servidor, sessão em cookie assinado) e histórico pessoal (CRUD).
+- `core/db.py`: SQLite em `DATA_DIR`; `core/auth.py`: sessão HMAC.
 - `models/receipt.py`: Modelos Pydantic (`ReceiptData` com novos campos `establishment_name`, `date`).
 
 ### Android (`android/app/src/main/java/com/divup/app`)

@@ -47,3 +47,6 @@ nota_teste.jpg
 backend/credentials.json
 *.hprof
 
+
+# Banco do histórico (só no servidor)
+data/

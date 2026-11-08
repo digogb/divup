@@ -93,6 +93,14 @@ Se ver a documentação do Swagger, parabéns! O DivUp está online. 🎉
 
 ---
 
+## 👤 Login com Google e histórico
+
+- Variáveis no `~/divup/.env`: `GOOGLE_CLIENT_ID` (ID do cliente OAuth, público) e `SESSION_SECRET` (gerar com `openssl rand -hex 32`; trocar desloga todo mundo).
+- No Google Cloud, o cliente OAuth precisa ter `https://divup.rglabs.tech` em "Origens JavaScript autorizadas".
+- O banco SQLite fica em `~/divup/data/divup.db` (volume `./data`). Não versionado.
+- Backup diário: `scripts/backup_db.sh` (cron às 03:15, mantém 14 dias em `data/backups/`).
+- Mudou variável ou volume no `docker-compose.yml`? É preciso recriar o container (veja a seção de atualização).
+
 ## 🔐 HTTPS (Cloudflare Tunnel)
 
 Em produção o app é acessado por **https://divup.rglabs.tech**, via Cloudflare Tunnel (serviço `cloudflared` no `docker-compose.yml`). Não é preciso abrir as portas 80/443.

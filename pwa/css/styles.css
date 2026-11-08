@@ -511,3 +511,91 @@ svg { flex-shrink: 0; }
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
     .scanline { display: none; }
 }
+
+/* ========================================
+   Conta e histórico
+======================================== */
+.home-top { display: flex; align-items: center; justify-content: space-between; margin-right: -8px; }
+.home-history { align-self: center; }
+
+.avatar {
+    border-radius: 50%;
+    background: var(--soft);
+    color: var(--soft-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-family: var(--font-display);
+    flex-shrink: 0;
+}
+
+.sheet-text { color: var(--muted); font-size: 15px; line-height: 1.5; }
+.sheet-fine { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.sheet-note { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.sheet-note svg { color: var(--accent); }
+.google-btn { min-height: 44px; display: flex; justify-content: center; align-items: center; }
+
+.account-card { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 16px; background: var(--bg); }
+.account-info { display: flex; flex-direction: column; min-width: 0; }
+.account-info strong { font-size: 16px; }
+.account-info span { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+
+.btn-danger-solid { background: #C0362C; color: #FFFFFF; }
+@media (prefers-color-scheme: dark) { .btn-danger-solid { background: #E5584C; color: #1A0503; } }
+.btn-text.btn-danger { align-self: center; font-size: 14px; color: #C0362C; }
+@media (prefers-color-scheme: dark) { .btn-text.btn-danger { color: #FF8A80; } }
+
+.history { background: var(--bg); }
+.history-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 16px calc(var(--safe-bottom) + 24px);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.history-group { display: flex; flex-direction: column; gap: 8px; }
+.history-month { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px; }
+.history-month span { font-size: 14px; font-weight: 600; }
+.history-month strong { font-family: var(--font-display); font-size: 16px; }
+
+.history-row {
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding-right: 4px;
+}
+.history-open {
+    flex: 1;
+    min-width: 0;
+    min-height: 64px;
+    padding: 12px 6px 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    color: var(--muted);
+}
+.history-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.history-title { font-size: 15px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-date { font-size: 13px; }
+.history-total { font-size: 15px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.history-delete { color: var(--muted); }
+.history-delete.is-pending { width: auto; padding: 0 12px; color: #FFFFFF; background: #C0362C; font-size: 14px; font-weight: 600; }
+
+.history-empty {
+    margin: auto 0;
+    text-align: center;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    padding: 40px 12px;
+}
+.history-empty strong { color: var(--ink); font-size: 17px; }

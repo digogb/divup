@@ -13,10 +13,15 @@ services:
       - UPLOAD_DIR=/app/uploads
       - LOG_LEVEL=DEBUG
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      # Login com Google + histórico (valores no .env do servidor)
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - SESSION_SECRET=${SESSION_SECRET:-}
+      - DATA_DIR=/app/data
     volumes:
       - ./backend/app:/app/app:ro  # Hot reload do código
       - ./pwa:/app/pwa:ro          # Hot reload da PWA
       - ./uploads:/app/uploads      # Persistir uploads
+      - ./data:/app/data            # Banco SQLite do histórico (fazer backup!)
       - ./backend/credentials.json:/app/credentials.json:ro # Credenciais Google
     restart: unless-stopped
 

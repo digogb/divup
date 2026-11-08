@@ -150,6 +150,42 @@ const API = {
         return receipt;
     },
 
+    // =====================================================
+    // Conta (login com Google) e histórico
+    // =====================================================
+    async request(method, path, body, { keepalive = false } = {}) {
+        let response;
+        try {
+            response = await fetch(`${this.BASE_URL}/api/v1${path}`, {
+                method,
+                credentials: 'same-origin',
+                keepalive,
+                headers: body ? { 'Content-Type': 'application/json' } : undefined,
+                body: body ? JSON.stringify(body) : undefined
+            });
+        } catch {
+            throw new Error('Sem conexão com o servidor. Tente de novo.');
+        }
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const error = new Error(typeof data.detail === 'string' ? data.detail : `Erro ${response.status}`);
+            error.status = response.status;
+            throw error;
+        }
+        return data;
+    },
+
+    authConfig() { return this.request('GET', '/auth/config'); },
+    me() { return this.request('GET', '/auth/me'); },
+    loginGoogle(credential) { return this.request('POST', '/auth/google', { credential }); },
+    logout() { return this.request('POST', '/auth/logout'); },
+    deleteAccount() { return this.request('DELETE', '/auth/me', { confirm: true }); },
+
+    listHistory() { return this.request('GET', '/history'); },
+    getHistory(id) { return this.request('GET', `/history/${encodeURIComponent(id)}`); },
+    saveHistory(entry, opts) { return this.request('PUT', `/history/${encodeURIComponent(entry.id)}`, entry, opts); },
+    deleteHistory(id) { return this.request('DELETE', `/history/${encodeURIComponent(id)}`); },
+
     /**
      * Converte a resposta do backend para o formato usado pelo app.
      */
@@ -175,7 +211,7 @@ const API = {
         });
 
         return {
-            id: dto.id,
+            id: dto.id || `r-${Date.now()}`,
             title: dto.establishment_name || 'Sua conta',
             date: dto.date || '',
             subtotal: Number(dto.subtotal) || 0,
