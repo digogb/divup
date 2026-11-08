@@ -9,12 +9,12 @@ class ReceiptService:
     def __init__(self):
         self.gemini_extractor = GeminiVisionExtractor()
     
-    def process_receipt_image(self, image_path: str) -> tuple[ReceiptData, int]:
+    def process_receipt_image(self, image_bytes: bytes) -> tuple[ReceiptData, int]:
         """Pipeline completo de processamento com Gemini Vision."""
         start_time = time.time()
-        
+
         try:
-            receipt_data = self.gemini_extractor.extract(image_path)
+            receipt_data = self.gemini_extractor.extract(image_bytes)
             
             processing_time = int((time.time() - start_time) * 1000)
             
