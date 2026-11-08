@@ -20,3 +20,15 @@ services:
       - ./backend/credentials.json:/app/credentials.json:ro # Credenciais Google
     restart: unless-stopped
 
+  # Cloudflare Tunnel: expõe https://divup.rglabs.tech -> api:8001
+  # O token fica só no .env do servidor (CLOUDFLARE_TUNNEL_TOKEN), fora do Git.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: divup-tunnel
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - api
+    restart: unless-stopped
+
