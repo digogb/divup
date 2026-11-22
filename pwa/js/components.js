@@ -245,6 +245,22 @@ const Components = {
     },
 
     itemCard(it) {
+        // Já é de outra pessoa: versão compacta e apagada, com a inicial de quem marcou
+        if (it.taken) {
+            return `
+                <div class="item is-taken" data-item="${Fmt.esc(it.id)}">
+                    <button class="item-main" data-action="toggle" data-id="${Fmt.esc(it.id)}" aria-pressed="false"
+                            aria-label="${Fmt.esc(it.name)}, de ${Fmt.esc(it.others)}, ${it.price}. ${Fmt.esc(it.priceSub)}">
+                        <span class="owner-badge" aria-hidden="true">${Fmt.esc(it.ownerInitial)}</span>
+                        <span class="item-text">
+                            <span class="item-name">${Fmt.esc(it.name)}</span>
+                            <span class="item-meta">de ${Fmt.esc(it.others)} · ${Fmt.esc(it.priceSub)}</span>
+                        </span>
+                        <span class="item-price"><span class="price">${it.price}</span></span>
+                    </button>
+                </div>
+            `;
+        }
         const cls = ['item', it.selected ? 'is-selected' : '', it.taken ? 'is-taken' : '', it.editing ? 'is-editing' : ''].join(' ');
         const action = it.editing ? 'edit-item' : 'toggle';
         const label = it.editing ? `Editar ${Fmt.esc(it.name)}` : '';

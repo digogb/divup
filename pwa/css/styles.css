@@ -325,10 +325,18 @@ svg { flex-shrink: 0; }
 .item-list #checkStrip:empty { display: none; }
 .item-list .check-strip { margin: 0; }
 
-.item.is-taken { background: transparent; border-style: dashed; }
-.item.is-taken .item-name, .item.is-taken .item-price .price { color: var(--muted); }
-.item.is-taken .check { opacity: .4; }
-.item.is-taken .item-others { color: var(--ink-2); font-weight: 500; }
+/* Item que já é de outra pessoa: compacto, apagado, uma linha */
+.item.is-taken { background: transparent; border-style: dashed; border-color: var(--line); opacity: .55; }
+.item.is-taken .item-main { min-height: 48px; padding: 8px 14px; }
+.item.is-taken .item-name { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item.is-taken .item-meta { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item.is-taken .item-price .price { font-size: 14px; font-weight: 500; color: var(--muted); text-decoration: line-through; }
+.owner-badge {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    background: var(--line-strong); color: var(--ink-2);
+    font-size: 12px; font-weight: 700;
+}
 
 .item-others { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
 .item-others svg { width: 14px; height: 14px; flex-shrink: 0; }

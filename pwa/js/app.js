@@ -217,7 +217,8 @@ const App = {
             isSplit: !editing && selected && it.split > 1,
             splitLabel: `${it.split} pessoas`,
             splitIncDisabled: it.split >= MAX_SPLIT,
-            others: editing ? '' : this.othersOn(it).join(', ')
+            others: editing ? '' : this.othersOn(it).join(', '),
+            ownerInitial: taken ? (this.othersOn(it)[0] || '?').trim().charAt(0).toUpperCase() : ''
         };
     },
 
