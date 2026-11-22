@@ -245,7 +245,7 @@ const Components = {
     },
 
     itemCard(it) {
-        const cls = ['item', it.selected ? 'is-selected' : '', it.editing ? 'is-editing' : ''].join(' ');
+        const cls = ['item', it.selected ? 'is-selected' : '', it.taken ? 'is-taken' : '', it.editing ? 'is-editing' : ''].join(' ');
         const action = it.editing ? 'edit-item' : 'toggle';
         const label = it.editing ? `Editar ${Fmt.esc(it.name)}` : '';
 

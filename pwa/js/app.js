@@ -192,14 +192,23 @@ const App = {
         const selected = it.sel > 0;
         const full = it.quantity * it.unitPrice;
         const partial = selected && (it.sel < it.quantity || it.split > 1);
+        // Com várias pessoas: item que já é todo de outra(s) fica apagado
+        const taken = !editing && !selected && this.multi() && this.othersPicking(it).length > 0
+            && this.restPick(it).sel === 0;
+        // Parte do item já é de outra pessoa: mostra o que sobra
+        const rest = !editing && !selected && !taken && this.multi() && this.othersPicking(it).length > 0
+            ? this.restPick(it) : null;
         return {
             id: it.id,
             name: it.name,
             editing,
             selected: selected && !editing,
+            taken,
             meta: this.itemMeta(it),
-            price: Fmt.brl(selected && !editing ? this.itemShare(it) : full),
-            priceSub: partial && !editing ? `${it.split > 1 ? `÷ ${it.split} · ` : ''}de ${Fmt.brl(full)}` : '',
+            price: Fmt.brl(selected && !editing ? this.itemShare(it) : rest ? this.itemShare({ ...it, ...rest }) : full),
+            priceSub: partial && !editing ? `${it.split > 1 ? `÷ ${it.split} · ` : ''}de ${Fmt.brl(full)}`
+                : rest ? (rest.split > 1 ? `sobra ${rest.sel}/${rest.split} de ${Fmt.brl(full)}` : `sobra${rest.sel > 1 ? 'm' : ''} ${rest.sel} de ${it.quantity}`)
+                : taken ? (this.othersPicking(it).every(i => this.pickOf(it, i).sel === it.quantity) ? 'toque p/ dividir' : 'já marcado') : '',
             showQty: !editing && selected && it.quantity > 1,
             qtyLabel: `${it.sel} de ${it.quantity}`,
             qtyDecDisabled: it.sel <= 1,
@@ -547,13 +556,65 @@ const App = {
         const it = this.findItem(id);
         if (!it) return;
         if (it.sel > 0) {
+            // Se o item estava dividido por igual com outras pessoas, devolve a elas
+            const sharedWith = this.wholeSharers(it);
             it.sel = 0;
             it.split = 1;
+            if (sharedWith) this.setShare(it, sharedWith, sharedWith.length);
+        } else if (this.multi()) {
+            const rest = this.restPick(it);
+            const others = this.othersPicking(it);
+            if (rest.sel > 0) {
+                // Pega só o que ninguém marcou (ex.: 2 de 4 cervejas)
+                it.sel = rest.sel;
+                it.split = rest.split;
+            } else if (others.length && others.every(i => this.pickOf(it, i).sel === it.quantity)) {
+                // Já é inteiro de outra(s) pessoa(s): divide por igual com elas
+                const n = others.length + 1;
+                this.setShare(it, others, n);
+                it.sel = it.quantity;
+                it.split = n;
+                const names = [...others.map(i => this.personName(i)), this.personName(this.state.active)];
+                this.toast(`Dividido entre ${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`);
+            } else {
+                this.toast('Todas as unidades já foram marcadas');
+                return;
+            }
         } else {
             it.sel = it.quantity;
         }
         this.refreshItem(id);
         this.refreshTotals();
+    },
+
+    /** Índices das outras pessoas que marcaram este item. */
+    othersPicking(it) {
+        return this.state.people
+            .map((_, i) => i)
+            .filter(i => i !== this.state.active && this.pickOf(it, i).sel > 0);
+    },
+
+    /**
+     * Se a pessoa ativa divide este item inteiro por igual com outras (todos com
+     * o item inteiro e "÷ n", n = quantas pessoas), devolve os índices delas.
+     */
+    wholeSharers(it) {
+        if (!this.multi() || it.sel !== it.quantity || it.split < 2) return null;
+        const others = this.othersPicking(it);
+        const n = others.length + 1;
+        if (!others.length || it.split !== n) return null;
+        const even = others.every(i => {
+            const p = this.pickOf(it, i);
+            return p.sel === it.quantity && p.split === n;
+        });
+        return even ? others : null;
+    },
+
+    /** Grava "item inteiro ÷ split" nas marcações guardadas das pessoas indicadas. */
+    setShare(it, indexes, split) {
+        for (const i of indexes) {
+            this.state.people[i].picks[it.id] = { sel: it.quantity, split: Math.max(1, split) };
+        }
     },
 
     changeQty(id, delta) {
@@ -651,7 +712,7 @@ const App = {
         if (n === people.length) return;
         if (n > people.length) {
             const used = new Set(people.map(p => p.name));
-            for (let k = 2; people.length < n; k++) {
+            for (let k = people.length + 1; people.length < n; k++) {
                 if (!used.has(`Pessoa ${k}`)) people.push({ name: `Pessoa ${k}`, picks: {} });
             }
             this.switchPerson(people.length - 1);
