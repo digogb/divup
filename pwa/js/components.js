@@ -176,19 +176,14 @@ const Components = {
                     <button class="btn-text" data-action="toggle-edit" id="btnEdit">${view.editing ? 'Concluir' : 'Editar'}</button>
                 </header>
 
-                <div id="checkStrip">${this.checkStrip(view.check)}</div>
-
                 <div id="peopleBar">${this.peopleBar(view.people)}</div>
 
                 <div class="list-head">
-                    <span id="listHint">${Fmt.esc(view.hint)}</span>
+                    <span id="listHint">${view.hint}</span>
                     <button class="btn-text" data-action="bulk" id="btnBulk" ${view.editing ? 'hidden' : ''}>${view.bulkLabel}</button>
                 </div>
 
-                <div class="item-list" id="itemList">
-                    ${view.items.map(it => this.itemCard(it)).join('')}
-                    <button class="add-item" data-action="add-item">${Icons.plus}Adicionar item que faltou</button>
-                </div>
+                <div class="item-list" id="itemList">${this.itemListInner(view.check, view.items)}</div>
 
                 <footer class="footer" id="footer">${this.footer(view.footer)}</footer>
             </main>
@@ -196,20 +191,36 @@ const Components = {
         `;
     },
 
+    /** Conferência com o total da nota + itens; a conferência rola junto com a lista. */
+    itemListInner(check, items) {
+        return `
+            <div id="checkStrip">${this.checkStrip(check)}</div>
+            ${items.map(it => this.itemCard(it)).join('')}
+            <button class="add-item" data-action="add-item">${Icons.plus}Adicionar item que faltou</button>
+        `;
+    },
+
+    /**
+     * Uma pessoa: "Quantas pessoas vão pagar? − 1 +".
+     * Várias: só as abas (uma linha), com "+" no fim. Remover fica no toque na aba ativa.
+     */
     peopleBar(p) {
         if (p.hidden) return '';
-        const tabs = p.multi ? `
-            <div class="person-tabs" role="group" aria-label="Escolha de quem são as marcações">
-                ${p.tabs.map(t => `
-                    <button class="person-tab" data-action="person" data-index="${t.index}" aria-pressed="${t.on}"
-                            ${t.on ? `aria-label="${Fmt.esc(t.name)}, ${t.total}. Toque para renomear"` : ''}>
-                        <span class="person-name">${Fmt.esc(t.name)}${t.on ? Icons.pencil : ''}</span>
-                        <span class="person-total">${t.total}</span>
-                    </button>`).join('')}
-            </div>
-            <p class="people-left ${p.left ? '' : 'is-done'}" aria-live="polite">${p.left
-                ? `Falta marcar <strong>${p.left}</strong> da conta`
-                : `${Icons.checkSmall} Todos os itens têm dono`}</p>` : '';
+        if (p.multi) {
+            return `
+                <div class="people">
+                    <div class="person-tabs" role="group" aria-label="${p.count} pessoas vão pagar. Escolha de quem são as marcações">
+                        ${p.tabs.map(t => `
+                            <button class="person-tab" data-action="person" data-index="${t.index}" aria-pressed="${t.on}"
+                                    ${t.on ? `aria-label="${Fmt.esc(t.name)}, ${t.total}. Toque para renomear ou remover"` : ''}>
+                                <span class="person-name">${Fmt.esc(t.name)}${t.on ? Icons.pencil : ''}</span>
+                                <span class="person-total">${t.total}</span>
+                            </button>`).join('')}
+                        <button class="person-add" data-action="people-inc" aria-label="Mais uma pessoa" ${p.incDisabled ? 'disabled' : ''}>${Icons.plus}</button>
+                    </div>
+                </div>
+            `;
+        }
         return `
             <div class="people">
                 <div class="people-row">
@@ -220,7 +231,6 @@ const Components = {
                         <button class="step-btn plus" data-action="people-inc" aria-label="Mais uma pessoa" ${p.incDisabled ? 'disabled' : ''}>${Icons.plus}</button>
                     </div>
                 </div>
-                ${tabs}
             </div>
         `;
     },

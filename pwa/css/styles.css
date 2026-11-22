@@ -275,11 +275,11 @@ svg { flex-shrink: 0; }
 .check-strip.warn strong { color: var(--warn-ink); }
 
 /* Pessoas que vão pagar */
-.people { margin: 8px 16px 0; display: flex; flex-direction: column; gap: 8px; }
+.people { margin: 6px 16px 0; }
 .people-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-left: 4px; }
 .people-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; min-width: 0; }
 .people-label svg { color: var(--muted); flex-shrink: 0; }
-.stepper-value.narrow { min-width: 32px; }
+.stepper-value.narrow { min-width: 28px; }
 .people .step-btn { width: 40px; height: 40px; }
 
 .person-tabs {
@@ -292,30 +292,38 @@ svg { flex-shrink: 0; }
     scroll-padding: 0 16px;
 }
 .person-tabs::-webkit-scrollbar { display: none; }
-.person-tab {
+.person-tab, .person-add {
     flex-shrink: 0;
-    min-height: 52px;
-    max-width: 160px;
-    padding: 6px 12px;
+    min-height: 48px;
     border-radius: 12px;
     border: 1.5px solid var(--line);
     background: var(--surface);
+}
+.person-tab {
+    max-width: 150px;
+    padding: 4px 12px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
     text-align: left;
 }
+.person-add { width: 48px; display: flex; align-items: center; justify-content: center; color: var(--accent); border-style: dashed; border-color: var(--dash); }
+.person-add:disabled { opacity: .35; }
 .person-name { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .person-name svg { flex-shrink: 0; opacity: .7; }
 .person-total { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .person-tab[aria-pressed="true"] { background: var(--soft); border-color: var(--accent); }
 .person-tab[aria-pressed="true"] .person-total { color: var(--soft-ink); }
 
-.people-left { font-size: 13px; color: var(--warn-ink); padding-left: 4px; }
-.people-left strong { font-weight: 600; }
-.people-left.is-done { color: var(--muted); display: flex; align-items: center; gap: 6px; }
-.people-left.is-done svg { color: var(--accent); }
+.hint-left { color: var(--warn-ink); font-weight: 500; }
+.hint-left strong { font-weight: 700; }
+.hint-done { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.hint-done svg { color: var(--accent); }
+
+/* A conferência com a nota rola junto com os itens */
+.item-list #checkStrip:empty { display: none; }
+.item-list .check-strip { margin: 0; }
 
 .item-others { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
 .item-others svg { width: 14px; height: 14px; flex-shrink: 0; }
@@ -666,3 +674,16 @@ svg { flex-shrink: 0; }
 
 .sheet-fine a { color: var(--accent); }
 .legal-links { text-align: center; }
+
+/* Telas baixas (tela externa de dobráveis, celulares pequenos, fonte grande):
+   aperta o cabeçalho e o rodapé para sobrar espaço para os itens. */
+@media (max-height: 720px) {
+    .receipt-top { padding-top: 4px; padding-bottom: 4px; }
+    .list-head { padding-top: 6px; padding-bottom: 2px; }
+    .person-tab, .person-add { min-height: 44px; }
+    .person-add { width: 44px; }
+    .footer { padding-top: 10px; padding-bottom: calc(var(--safe-bottom) + 10px); gap: 10px; }
+    .footer .chip { height: 38px; }
+    .footer .btn { height: 46px; }
+    .total-value { font-size: 26px; }
+}

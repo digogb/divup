@@ -10,6 +10,8 @@ const TIP_PRESETS = [0, 10, 15];
 const MAX_SPLIT = 12;
 const MAX_PEOPLE = 12;
 const ME = 'Você';
+/** Nomes que querem dizer "eu" (quem está com o celular). */
+const isSelf = (name) => /^(voc[eê]|eu)$/i.test(String(name || '').trim());
 const STORAGE = {
     get(key, fallback) {
         try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch { return fallback; }
@@ -114,7 +116,7 @@ const App = {
     /** "Sua parte" / "Parte de Ana" */
     partLabel(i = this.state.active) {
         const name = this.personName(i);
-        return name === ME ? 'Sua parte' : `Parte de ${name}`;
+        return isSelf(name) ? 'Sua parte' : `Parte de ${name}`;
     },
 
     /** Soma de todos os itens (já com desconto de item) e o desconto da conta aplicável. */
@@ -236,7 +238,7 @@ const App = {
     },
 
     totalDetail(t) {
-        if (!t.any) return this.personName(this.state.active) === ME
+        if (!t.any) return isSelf(this.personName(this.state.active))
             ? 'Toque nos itens que você consumiu'
             : `Toque nos itens de ${this.personName(this.state.active)}`;
         const discount = t.myDiscount > 0.004 ? ` − desconto ${Fmt.brl(t.myDiscount)}` : '';
@@ -252,7 +254,7 @@ const App = {
             editing: this.state.editing,
             check: this.checkView(),
             bulkLabel: this.bulkLabel(t.any),
-            hint: this.listHint(),
+            hint: this.listHintHtml(),
             people: this.peopleView(),
             items: r.items.map(it => this.itemView(it)),
             footer: this.footerView()
@@ -260,20 +262,28 @@ const App = {
     },
 
     bulkLabel(any) {
-        if (any) return 'Limpar';
+        if (!this.bulkFillsRest(any)) return 'Limpar';
         return this.multi() ? 'Marcar o resto' : 'Marcar tudo';
     },
 
-    listHint() {
+    /**
+     * Título da lista. Com várias pessoas, a aba ativa já diz de quem são as
+     * marcações, então o espaço mostra quanto falta marcar.
+     */
+    listHintHtml() {
         if (this.state.editing) return 'Toque num item para corrigir';
-        const name = this.personName(this.state.active);
-        return name === ME ? 'Toque no que é seu' : `Toque no que é de ${name}`;
+        if (this.multi()) {
+            const left = this.unassigned();
+            return left > 0.05
+                ? `<span class="hint-left">Falta marcar <strong>${Fmt.brl(left)}</strong></span>`
+                : `<span class="hint-done">${Icons.checkSmall}Tudo marcado</span>`;
+        }
+        return 'Toque no que é seu';
     },
 
     peopleView() {
         const s = this.state;
         const multi = this.multi();
-        const left = multi ? this.unassigned() : 0;
         return {
             count: s.people.length,
             decDisabled: s.people.length <= 1,
@@ -285,7 +295,6 @@ const App = {
                 total: Fmt.brl(this.totals(i).total),
                 on: i === s.active
             })) : [],
-            left: left > 0.05 ? Fmt.brl(left) : '',
             hidden: s.editing
         };
     },
@@ -318,8 +327,7 @@ const App = {
         const list = this.$('#itemList');
         if (!list) return;
         const scroll = list.scrollTop;
-        list.innerHTML = this.state.receipt.items.map(it => Components.itemCard(this.itemView(it))).join('') +
-            `<button class="add-item" data-action="add-item">${Icons.plus}Adicionar item que faltou</button>`;
+        list.innerHTML = Components.itemListInner(this.checkView(), this.state.receipt.items.map(it => this.itemView(it)));
         list.scrollTop = scroll;
     },
 
@@ -328,7 +336,7 @@ const App = {
         this.$('#checkStrip').innerHTML = Components.checkStrip(this.checkView());
         this.$('#receiptSubtitle').textContent = this.subtitle();
         this.$('#btnEdit').textContent = editing ? 'Concluir' : 'Editar';
-        this.$('#listHint').textContent = this.listHint();
+        this.$('#listHint').innerHTML = this.listHintHtml();
         this.$('#btnBulk').hidden = editing;
         this.refreshPeople();
     },
@@ -353,6 +361,7 @@ const App = {
         this.$('#totalDetail').textContent = this.totalDetail(t);
         this.$('#btnSend').disabled = !t.any;
         this.$('#btnBulk').textContent = this.bulkLabel(t.any);
+        this.$('#listHint').innerHTML = this.listHintHtml();
         this.refreshPeople();
         const customChip = this.root.querySelector('.chip[data-tip="custom"]');
         if (customChip && this.state.tip.mode === 'custom') customChip.textContent = `${Fmt.num(t.pct)}%`;
@@ -566,11 +575,17 @@ const App = {
         this.root.querySelector(`[data-item="${CSS.escape(id)}"] [data-action="${focusTarget}"]`)?.focus();
     },
 
+    /** Com várias pessoas: "Marcar o resto" enquanto faltar algo, senão "Limpar". */
+    bulkFillsRest(any) {
+        return this.multi() ? this.unassigned() > 0.05 : !any;
+    },
+
     bulkSelect() {
         const items = this.state.receipt.items;
-        const any = items.some(it => it.sel > 0);
+        const fill = this.bulkFillsRest(items.some(it => it.sel > 0));
         items.forEach(it => {
-            const rest = any ? { sel: 0, split: 1 } : this.restPick(it);
+            // O resto inclui o que a pessoa ativa já tinha marcado
+            const rest = fill ? this.restPick(it) : { sel: 0, split: 1 };
             it.sel = rest.sel;
             it.split = rest.split;
         });
@@ -627,6 +642,7 @@ const App = {
         this.refreshHeader();
         this.refreshList();
         this.refreshFooter();
+        this.refreshTotals();
     },
 
     setPeopleCount(n) {
@@ -645,7 +661,7 @@ const App = {
         }
         while (people.length > n) this.dropPerson(people.length - 1);
         this.refreshAll();
-        this.focusAfterRefresh('[data-action="people-dec"]');
+        this.focusAfterRefresh('[data-action="people-dec"]:not([disabled]), [data-action="people-inc"]');
     },
 
     /** Remove a pessoa i, mantendo as marcações das demais. */
@@ -871,7 +887,7 @@ const App = {
             return {
                 heading: this.multi() && mode === 'all' ? name : '',
                 lines,
-                totalLabel: name === ME ? 'Minha parte' : this.partLabel(i),
+                totalLabel: isSelf(name) ? 'Minha parte' : this.partLabel(i),
                 total: Fmt.brl(t.total)
             };
         };
@@ -881,11 +897,11 @@ const App = {
 
         return {
             title: r.date ? `${r.title} · ${r.date}` : r.title,
-            heading: mode === 'all' ? 'Enviar a parte de todos' : one === ME ? 'Enviar sua parte' : `Enviar parte de ${one}`,
+            heading: mode === 'all' ? 'Enviar a parte de todos' : isSelf(one) ? 'Enviar sua parte' : `Enviar parte de ${one}`,
             blocks,
             multi: this.multi(),
             mode,
-            oneLabel: one === ME ? 'Só a minha' : `Só ${one}`,
+            oneLabel: isSelf(one) ? 'Só a minha' : `Só ${one}`,
             left: mode === 'all' && this.unassigned() > 0.05 ? Fmt.brl(this.unassigned()) : '',
             pixOn: STORAGE.get('divup.pixOn', '0') === '1',
             pixKey: STORAGE.get('divup.pixKey', ''),
@@ -927,9 +943,9 @@ const App = {
             if (t.pct > 0) rows.push(row(`Serviço ${Fmt.num(t.pct)}%`, money(t.tipAmount)));
             rows.push('-'.repeat(W));
             const name = clean(this.personName(i));
-            const label = withName ? 'A PAGAR' : name === ME ? 'MINHA PARTE' : `PARTE DE ${name.toUpperCase()}`;
+            const label = withName ? 'A PAGAR' : isSelf(name) ? 'MINHA PARTE' : `PARTE DE ${name.toUpperCase()}`;
             rows.push(row(label, Fmt.brl(t.total)));
-            if (withName) rows.unshift(`▸ ${fit(name === ME ? 'Eu' : name, W - 2)}`);
+            if (withName) rows.unshift(`▸ ${fit(isSelf(name) ? 'Eu' : name, W - 2)}`);
             return { rows, total: t.total, any: t.any };
         };
 
