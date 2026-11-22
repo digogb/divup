@@ -570,8 +570,9 @@ const App = {
         const items = this.state.receipt.items;
         const any = items.some(it => it.sel > 0);
         items.forEach(it => {
-            it.split = 1;
-            it.sel = any ? 0 : this.freeQty(it);
+            const rest = any ? { sel: 0, split: 1 } : this.restPick(it);
+            it.sel = rest.sel;
+            it.split = rest.split;
         });
         this.refreshList();
         this.refreshTotals();
@@ -664,16 +665,26 @@ const App = {
     },
 
     /** Toque numa aba: troca de pessoa; na aba já ativa, abre para renomear. */
-    /** Unidades do item que nenhuma outra pessoa marcou (itens divididos não entram). */
-    freeQty(it) {
-        let taken = 0;
-        for (let i = 0; i < this.state.people.length; i++) {
-            if (i === this.state.active) continue;
-            const p = this.pickOf(it, i);
-            if (p.sel > 0 && p.split > 1) return 0;
-            taken += p.sel;
+    /**
+     * O que sobra do item depois das marcações das outras pessoas, como { sel, split }.
+     * Ex.: outra pessoa marcou a picanha "÷ 2" -> sobra 1 unidade ÷ 2.
+     * Conta em "cotas" (fração da unidade) usando o MMC das divisões já usadas.
+     */
+    restPick(it) {
+        const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+        const others = this.state.people
+            .map((_, i) => (i === this.state.active ? null : this.pickOf(it, i)))
+            .filter(p => p && p.sel > 0);
+        const k = others.reduce((acc, p) => acc * p.split / gcd(acc, p.split), 1);
+        const taken = others.reduce((acc, p) => acc + p.sel * k / p.split, 0);
+        const left = it.quantity * k - taken;   // cotas de 1/k unidade que ninguém pegou
+        if (left <= 0) return { sel: 0, split: 1 };
+        // Menor divisão que representa o que sobra com uma quantidade inteira
+        for (let split = 1; split <= MAX_SPLIT; split++) {
+            const sel = left * split / k;
+            if (Number.isInteger(sel) && sel <= it.quantity) return { sel, split };
         }
-        return Math.max(0, it.quantity - taken);
+        return { sel: 0, split: 1 }; // não dá para representar (fica no "Falta marcar")
     },
 
     pickPerson(i) {
