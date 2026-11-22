@@ -178,8 +178,10 @@ const Components = {
 
                 <div id="checkStrip">${this.checkStrip(view.check)}</div>
 
+                <div id="peopleBar">${this.peopleBar(view.people)}</div>
+
                 <div class="list-head">
-                    <span id="listHint">${view.editing ? 'Toque num item para corrigir' : 'Toque no que é seu'}</span>
+                    <span id="listHint">${Fmt.esc(view.hint)}</span>
                     <button class="btn-text" data-action="bulk" id="btnBulk" ${view.editing ? 'hidden' : ''}>${view.bulkLabel}</button>
                 </div>
 
@@ -191,6 +193,35 @@ const Components = {
                 <footer class="footer" id="footer">${this.footer(view.footer)}</footer>
             </main>
             <div id="sheetRoot"></div>
+        `;
+    },
+
+    peopleBar(p) {
+        if (p.hidden) return '';
+        const tabs = p.multi ? `
+            <div class="person-tabs" role="group" aria-label="Escolha de quem são as marcações">
+                ${p.tabs.map(t => `
+                    <button class="person-tab" data-action="person" data-index="${t.index}" aria-pressed="${t.on}"
+                            ${t.on ? `aria-label="${Fmt.esc(t.name)}, ${t.total}. Toque para renomear"` : ''}>
+                        <span class="person-name">${Fmt.esc(t.name)}${t.on ? Icons.pencil : ''}</span>
+                        <span class="person-total">${t.total}</span>
+                    </button>`).join('')}
+            </div>
+            <p class="people-left ${p.left ? '' : 'is-done'}" aria-live="polite">${p.left
+                ? `Falta marcar <strong>${p.left}</strong> da conta`
+                : `${Icons.checkSmall} Todos os itens têm dono`}</p>` : '';
+        return `
+            <div class="people">
+                <div class="people-row">
+                    <span class="people-label" id="peopleLabel">${Icons.people}Quantas pessoas vão pagar?</span>
+                    <div class="stepper" role="group" aria-labelledby="peopleLabel">
+                        <button class="step-btn" data-action="people-dec" aria-label="Menos uma pessoa" ${p.decDisabled ? 'disabled' : ''}>${Icons.minus}</button>
+                        <span class="stepper-value narrow" aria-live="polite">${p.count}</span>
+                        <button class="step-btn plus" data-action="people-inc" aria-label="Mais uma pessoa" ${p.incDisabled ? 'disabled' : ''}>${Icons.plus}</button>
+                    </div>
+                </div>
+                ${tabs}
+            </div>
         `;
     },
 
@@ -216,6 +247,7 @@ const Components = {
                     <span class="item-text">
                         <span class="item-name">${Fmt.esc(it.name)}</span>
                         <span class="item-meta">${it.meta}</span>
+                        ${it.others ? `<span class="item-others">${Icons.people}${Fmt.esc(it.others)}</span>` : ''}
                     </span>
                     <span class="item-price">
                         <span class="price">${it.price}</span>
@@ -268,7 +300,7 @@ const Components = {
                 </label>` : ''}
             <div class="footer-row">
                 <div class="total-block" aria-live="polite">
-                    <span class="label">Sua parte</span>
+                    <span class="label">${Fmt.esc(f.totalLabel)}</span>
                     <span class="total-value" id="totalValue">${f.total}</span>
                     <span class="total-detail" id="totalDetail">${f.detail}</span>
                 </div>
@@ -281,23 +313,34 @@ const Components = {
     // Sheet: enviar
     // ========================
     shareSheet(s) {
-        const lines = s.lines.map(l => `
-            <div class="share-line"><span>${Fmt.esc(l.label)}</span><span>${l.value}</span></div>
+        const blocks = s.blocks.map(b => `
+            ${b.heading ? `<div class="share-person">${Fmt.esc(b.heading)}</div>` : ''}
+            ${b.lines.map(l => `
+                <div class="share-line"><span>${Fmt.esc(l.label)}</span><span>${l.value}</span></div>
+            `).join('')}
+            <div class="share-total"><span>${Fmt.esc(b.totalLabel)}</span><strong>${b.total}</strong></div>
         `).join('');
+        const modes = s.multi ? `
+            <div class="chips share-modes" role="group" aria-label="O que enviar">
+                <button class="chip" data-action="share-mode" data-mode="one" aria-pressed="${s.mode === 'one'}">${Fmt.esc(s.oneLabel)}</button>
+                <button class="chip" data-action="share-mode" data-mode="all" aria-pressed="${s.mode === 'all'}">Todos</button>
+            </div>` : '';
 
         return `
             <div class="sheet-scrim" data-action="close-sheet">
                 <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
                     <div class="sheet-handle"></div>
                     <div class="sheet-head">
-                        <h2 id="shareTitle">Enviar sua parte</h2>
+                        <h2 id="shareTitle">${Fmt.esc(s.heading)}</h2>
                         <button class="icon-btn" data-action="close-sheet" aria-label="Fechar">${Icons.close}</button>
                     </div>
 
+                    ${modes}
+
                     <div class="share-preview">
                         <div class="title">${Fmt.esc(s.title)}</div>
-                        ${lines}
-                        <div class="share-total"><span>Minha parte</span><strong>${s.total}</strong></div>
+                        ${blocks}
+                        ${s.left ? `<div class="share-line share-left"><span>Ainda sem dono</span><span>${s.left}</span></div>` : ''}
                     </div>
 
                     <label class="check-row">
@@ -360,6 +403,32 @@ const Components = {
                     <div class="sheet-actions">
                         <button type="submit" class="btn btn-primary">${isNew ? 'Adicionar' : 'Salvar'}</button>
                         ${isNew ? '' : `<button type="button" class="btn btn-secondary btn-danger" data-action="delete-item" data-id="${Fmt.esc(item.id)}">Remover item</button>`}
+                    </div>
+                </form>
+            </div>
+        `;
+    },
+
+    // ========================
+    // Sheet: renomear pessoa
+    // ========================
+    personSheet(p) {
+        return `
+            <div class="sheet-scrim" data-action="close-sheet">
+                <form class="sheet" id="personForm" role="dialog" aria-modal="true" aria-labelledby="personSheetTitle" novalidate>
+                    <div class="sheet-handle"></div>
+                    <div class="sheet-head">
+                        <h2 id="personSheetTitle">Quem é?</h2>
+                        <button type="button" class="icon-btn" data-action="close-sheet" aria-label="Fechar">${Icons.close}</button>
+                    </div>
+                    <div class="field">
+                        <label for="pName">Nome</label>
+                        <input id="pName" name="name" type="text" autocomplete="off" maxlength="40" value="${Fmt.esc(p.name)}" required>
+                    </div>
+                    <p class="field-error" id="personFormError" hidden></p>
+                    <div class="sheet-actions">
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                        ${p.canRemove ? `<button type="button" class="btn btn-secondary btn-danger" data-action="remove-person" data-index="${p.index}">Remover ${Fmt.esc(p.name)}</button>` : ''}
                     </div>
                 </form>
             </div>

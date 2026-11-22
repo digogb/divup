@@ -274,6 +274,52 @@ svg { flex-shrink: 0; }
 .check-strip.warn { background: var(--warn-bg); border-color: transparent; color: var(--warn-ink); }
 .check-strip.warn strong { color: var(--warn-ink); }
 
+/* Pessoas que vão pagar */
+.people { margin: 8px 16px 0; display: flex; flex-direction: column; gap: 8px; }
+.people-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-left: 4px; }
+.people-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; min-width: 0; }
+.people-label svg { color: var(--muted); flex-shrink: 0; }
+.stepper-value.narrow { min-width: 32px; }
+.people .step-btn { width: 40px; height: 40px; }
+
+.person-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 2px 16px;
+    scroll-padding: 0 16px;
+}
+.person-tabs::-webkit-scrollbar { display: none; }
+.person-tab {
+    flex-shrink: 0;
+    min-height: 52px;
+    max-width: 160px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1.5px solid var(--line);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    text-align: left;
+}
+.person-name { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person-name svg { flex-shrink: 0; opacity: .7; }
+.person-total { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.person-tab[aria-pressed="true"] { background: var(--soft); border-color: var(--accent); }
+.person-tab[aria-pressed="true"] .person-total { color: var(--soft-ink); }
+
+.people-left { font-size: 13px; color: var(--warn-ink); padding-left: 4px; }
+.people-left strong { font-weight: 600; }
+.people-left.is-done { color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.people-left.is-done svg { color: var(--accent); }
+
+.item-others { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.item-others svg { width: 14px; height: 14px; flex-shrink: 0; }
+
 .list-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 4px 20px; }
 .list-head > span { font-size: 14px; font-weight: 600; }
 
@@ -466,6 +512,9 @@ svg { flex-shrink: 0; }
 .share-line span:last-child { white-space: nowrap; }
 .share-total { border-top: 1.5px dashed var(--dash); margin-top: 6px; padding-top: 10px; display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; }
 .share-total strong { font-family: var(--font-display); font-size: 22px; color: var(--accent); }
+.share-person { font-weight: 600; margin-top: 10px; }
+.share-left { color: var(--warn-ink); margin-top: 6px; }
+.share-modes .chip { flex: 1; }
 
 .check-row { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 15px; font-weight: 500; cursor: pointer; }
 .check-row input { width: 22px; height: 22px; accent-color: var(--accent); }

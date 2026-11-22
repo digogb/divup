@@ -5,7 +5,7 @@ Guarda o estado da divisão (itens, o que é "meu", divisões, serviço) para
 reabrir e reenviar depois. Nunca guarda a foto da nota.
 """
 import json
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
@@ -36,6 +36,17 @@ class SavedTip(BaseModel):
     custom: str = Field(default="", max_length=8)
 
 
+class SavedPick(BaseModel):
+    sel: int = Field(ge=0, le=999)
+    split: int = Field(ge=1, le=99)
+
+
+class SavedPerson(BaseModel):
+    """Uma das pessoas que vão pagar: o que ela marcou, por id do item."""
+    name: str = Field(max_length=40)
+    picks: Dict[str, SavedPick] = Field(default_factory=dict, max_length=300)
+
+
 class SaveReceipt(BaseModel):
     id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_.:-]+$")
     title: str = Field(max_length=200)
@@ -45,6 +56,8 @@ class SaveReceipt(BaseModel):
     discount: float = Field(default=0, ge=0)
     items: List[SavedItem] = Field(max_length=300)
     tip: SavedTip
+    people: List[SavedPerson] = Field(default_factory=list, max_length=12)
+    active: int = Field(default=0, ge=0, le=11)
     my_total: float = Field(ge=0, le=10_000_000)
 
     @field_validator("title")

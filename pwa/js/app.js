@@ -8,6 +8,8 @@
 
 const TIP_PRESETS = [0, 10, 15];
 const MAX_SPLIT = 12;
+const MAX_PEOPLE = 12;
+const ME = 'Você';
 const STORAGE = {
     get(key, fallback) {
         try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch { return fallback; }
@@ -25,7 +27,11 @@ const App = {
         editing: false,
         loading: { step: 0, photoUrl: null, controller: null },
         errorMessage: '',
-        sheet: null,             // null | { type: 'share' } | { type: 'item', id } | { type: 'account' }
+        // Quem vai pagar. Os itens (sel/split) sempre refletem a pessoa ativa;
+        // as marcações das outras ficam guardadas em picks, por id do item.
+        people: [{ name: ME, picks: {} }],
+        active: 0,
+        sheet: null,             // null | { type: 'share', mode } | { type: 'item', id } | { type: 'person', index } | { type: 'account' }
         user: null,              // { email, name, picture } quando logado
         authConfig: null,        // { google_client_id }
         account: { confirmDelete: false, error: '' },
@@ -90,6 +96,27 @@ const App = {
         return it.sel * it.unitPrice / it.split;
     },
 
+    multi() {
+        return this.state.people.length > 1;
+    },
+
+    /** O que a pessoa i marcou neste item ({ sel, split }). */
+    pickOf(it, i) {
+        if (i === this.state.active) return { sel: it.sel, split: it.split };
+        const p = this.state.people[i]?.picks[it.id];
+        return p ? { sel: Math.min(p.sel, it.quantity), split: p.split } : { sel: 0, split: 1 };
+    },
+
+    personName(i) {
+        return this.state.people[i]?.name || `Pessoa ${i + 1}`;
+    },
+
+    /** "Sua parte" / "Parte de Ana" */
+    partLabel(i = this.state.active) {
+        const name = this.personName(i);
+        return name === ME ? 'Sua parte' : `Parte de ${name}`;
+    },
+
     /** Soma de todos os itens (já com desconto de item) e o desconto da conta aplicável. */
     billDiscount() {
         const r = this.state.receipt;
@@ -98,9 +125,10 @@ const App = {
         return { itemsSum, discount, ratio: itemsSum > 0 ? discount / itemsSum : 0 };
     },
 
-    totals() {
+    totals(i = this.state.active) {
         const items = this.state.receipt?.items || [];
-        const itemsAmount = items.reduce((sum, it) => sum + this.itemShare(it), 0);
+        const picks = items.map(it => this.pickOf(it, i));
+        const itemsAmount = items.reduce((sum, it, k) => sum + this.itemShare({ ...it, ...picks[k] }), 0);
         // Desconto da conta rateado proporcionalmente ao que cada um consumiu
         const myDiscount = itemsAmount * this.billDiscount().ratio;
         const subtotal = itemsAmount - myDiscount;
@@ -109,8 +137,32 @@ const App = {
         return {
             itemsAmount, myDiscount, subtotal, pct, tipAmount,
             total: subtotal + tipAmount,
-            any: items.some(it => it.sel > 0)
+            any: picks.some(p => p.sel > 0)
         };
+    },
+
+    /** Valor dos itens que ainda não foram marcados por ninguém (antes de desconto e serviço). */
+    unassigned() {
+        const items = this.state.receipt?.items || [];
+        const n = this.state.people.length;
+        const assigned = items.reduce((sum, it) => {
+            let share = 0;
+            for (let i = 0; i < n; i++) {
+                const p = this.pickOf(it, i);
+                share += p.sel * it.unitPrice / p.split;
+            }
+            return sum + Math.min(share, it.quantity * it.unitPrice);
+        }, 0);
+        return Math.max(0, this.billDiscount().itemsSum - assigned);
+    },
+
+    /** Nomes das outras pessoas que marcaram este item. */
+    othersOn(it) {
+        const names = [];
+        this.state.people.forEach((_, i) => {
+            if (i !== this.state.active && this.pickOf(it, i).sel > 0) names.push(this.personName(i));
+        });
+        return names;
     },
 
     checkView() {
@@ -153,7 +205,8 @@ const App = {
             canSplit: !editing && selected && it.split <= 1,
             isSplit: !editing && selected && it.split > 1,
             splitLabel: `${it.split} pessoas`,
-            splitIncDisabled: it.split >= MAX_SPLIT
+            splitIncDisabled: it.split >= MAX_SPLIT,
+            others: editing ? '' : this.othersOn(it).join(', ')
         };
     },
 
@@ -176,13 +229,16 @@ const App = {
             customOn: isCustom,
             customValue: tip.custom,
             total: Fmt.brl(t.total),
+            totalLabel: this.partLabel(),
             detail: this.totalDetail(t),
             any: t.any
         };
     },
 
     totalDetail(t) {
-        if (!t.any) return 'Toque nos itens que você consumiu';
+        if (!t.any) return this.personName(this.state.active) === ME
+            ? 'Toque nos itens que você consumiu'
+            : `Toque nos itens de ${this.personName(this.state.active)}`;
         const discount = t.myDiscount > 0.004 ? ` − desconto ${Fmt.brl(t.myDiscount)}` : '';
         return `itens ${Fmt.brl(t.itemsAmount)}${discount} + serviço ${Fmt.brl(t.tipAmount)}`;
     },
@@ -195,9 +251,42 @@ const App = {
             subtitle: this.subtitle(),
             editing: this.state.editing,
             check: this.checkView(),
-            bulkLabel: t.any ? 'Limpar' : 'Marcar tudo',
+            bulkLabel: this.bulkLabel(t.any),
+            hint: this.listHint(),
+            people: this.peopleView(),
             items: r.items.map(it => this.itemView(it)),
             footer: this.footerView()
+        };
+    },
+
+    bulkLabel(any) {
+        if (any) return 'Limpar';
+        return this.multi() ? 'Marcar o resto' : 'Marcar tudo';
+    },
+
+    listHint() {
+        if (this.state.editing) return 'Toque num item para corrigir';
+        const name = this.personName(this.state.active);
+        return name === ME ? 'Toque no que é seu' : `Toque no que é de ${name}`;
+    },
+
+    peopleView() {
+        const s = this.state;
+        const multi = this.multi();
+        const left = multi ? this.unassigned() : 0;
+        return {
+            count: s.people.length,
+            decDisabled: s.people.length <= 1,
+            incDisabled: s.people.length >= MAX_PEOPLE,
+            multi,
+            tabs: multi ? s.people.map((p, i) => ({
+                index: i,
+                name: this.personName(i),
+                total: Fmt.brl(this.totals(i).total),
+                on: i === s.active
+            })) : [],
+            left: left > 0.05 ? Fmt.brl(left) : '',
+            hidden: s.editing
         };
     },
 
@@ -239,8 +328,18 @@ const App = {
         this.$('#checkStrip').innerHTML = Components.checkStrip(this.checkView());
         this.$('#receiptSubtitle').textContent = this.subtitle();
         this.$('#btnEdit').textContent = editing ? 'Concluir' : 'Editar';
-        this.$('#listHint').textContent = editing ? 'Toque num item para corrigir' : 'Toque no que é seu';
+        this.$('#listHint').textContent = this.listHint();
         this.$('#btnBulk').hidden = editing;
+        this.refreshPeople();
+    },
+
+    refreshPeople() {
+        const bar = this.$('#peopleBar');
+        if (!bar) return;
+        const scroll = bar.querySelector('.person-tabs')?.scrollLeft || 0;
+        bar.innerHTML = Components.peopleBar(this.peopleView());
+        const tabs = bar.querySelector('.person-tabs');
+        if (tabs) tabs.scrollLeft = scroll;
     },
 
     refreshFooter() {
@@ -253,7 +352,8 @@ const App = {
         this.$('#totalValue').textContent = Fmt.brl(t.total);
         this.$('#totalDetail').textContent = this.totalDetail(t);
         this.$('#btnSend').disabled = !t.any;
-        this.$('#btnBulk').textContent = t.any ? 'Limpar' : 'Marcar tudo';
+        this.$('#btnBulk').textContent = this.bulkLabel(t.any);
+        this.refreshPeople();
         const customChip = this.root.querySelector('.chip[data-tip="custom"]');
         if (customChip && this.state.tip.mode === 'custom') customChip.textContent = `${Fmt.num(t.pct)}%`;
     },
@@ -292,7 +392,14 @@ const App = {
             case 'edit-item': this.openSheet({ type: 'item', id }); break;
             case 'add-item': this.openSheet({ type: 'item', id: null }); break;
             case 'delete-item': this.deleteItem(id); break;
-            case 'open-share': this.saveToHistory(); this.openSheet({ type: 'share' }); break;
+            case 'open-share': this.saveToHistory(); this.openSheet({ type: 'share', mode: 'one' }); break;
+            case 'share-mode': this.openSheet({ type: 'share', mode: el.dataset.mode, focusMode: true }); break;
+
+            // Pessoas
+            case 'people-inc': this.setPeopleCount(this.state.people.length + 1); break;
+            case 'people-dec': this.setPeopleCount(this.state.people.length - 1); break;
+            case 'person': this.pickPerson(Number(el.dataset.index)); break;
+            case 'remove-person': this.removePerson(Number(el.dataset.index)); break;
 
             // Sheets
             case 'close-sheet': this.closeSheet(); break;
@@ -344,6 +451,9 @@ const App = {
         if (e.target.id === 'itemForm') {
             e.preventDefault();
             this.saveItemForm(e.target);
+        } else if (e.target.id === 'personForm') {
+            e.preventDefault();
+            this.savePersonForm(e.target);
         }
     },
 
@@ -376,6 +486,7 @@ const App = {
             if (controller.signal.aborted) return;
 
             this.state.receipt = receipt;
+            this.resetPeople();
             this.state.editing = false;
             this.state.tip = { mode: 'preset', preset: 10, custom: this.state.tip.custom };
             this.go('receipt');
@@ -415,6 +526,7 @@ const App = {
     newReceipt() {
         this.saveToHistory();
         this.state.receipt = null;
+        this.resetPeople();
         this.state.editing = false;
         this.go('home');
     },
@@ -458,8 +570,8 @@ const App = {
         const items = this.state.receipt.items;
         const any = items.some(it => it.sel > 0);
         items.forEach(it => {
-            it.sel = any ? 0 : it.quantity;
             it.split = 1;
+            it.sel = any ? 0 : this.freeQty(it);
         });
         this.refreshList();
         this.refreshTotals();
@@ -479,6 +591,119 @@ const App = {
             input?.focus();
             input?.select();
         }
+    },
+
+    // =====================================================
+    // Pessoas que vão pagar
+    // =====================================================
+    resetPeople() {
+        this.state.people = [{ name: ME, picks: {} }];
+        this.state.active = 0;
+    },
+
+    /** Guarda as marcações da pessoa ativa (que vivem nos itens). */
+    stashActive() {
+        const picks = {};
+        for (const it of this.state.receipt?.items || []) {
+            if (it.sel > 0) picks[it.id] = { sel: it.sel, split: it.split };
+        }
+        this.state.people[this.state.active].picks = picks;
+    },
+
+    /** Troca a pessoa ativa, carregando as marcações dela nos itens. */
+    switchPerson(i) {
+        this.stashActive();
+        this.state.active = i;
+        const picks = this.state.people[i].picks;
+        for (const it of this.state.receipt.items) {
+            const p = picks[it.id];
+            it.sel = p ? Math.min(p.sel, it.quantity) : 0;
+            it.split = p ? p.split : 1;
+        }
+    },
+
+    refreshAll() {
+        this.refreshHeader();
+        this.refreshList();
+        this.refreshFooter();
+    },
+
+    setPeopleCount(n) {
+        const people = this.state.people;
+        n = Math.min(MAX_PEOPLE, Math.max(1, n));
+        if (n === people.length) return;
+        if (n > people.length) {
+            const used = new Set(people.map(p => p.name));
+            for (let k = 2; people.length < n; k++) {
+                if (!used.has(`Pessoa ${k}`)) people.push({ name: `Pessoa ${k}`, picks: {} });
+            }
+            this.switchPerson(people.length - 1);
+            this.refreshAll();
+            this.focusAfterRefresh('[data-action="people-inc"]');
+            return;
+        }
+        while (people.length > n) this.dropPerson(people.length - 1);
+        this.refreshAll();
+        this.focusAfterRefresh('[data-action="people-dec"]');
+    },
+
+    /** Remove a pessoa i, mantendo as marcações das demais. */
+    dropPerson(i) {
+        const s = this.state;
+        if (s.people.length <= 1) return;
+        if (s.active === i) this.switchPerson(i === 0 ? 1 : i - 1);
+        this.stashActive();
+        s.people.splice(i, 1);
+        if (s.active > i) s.active--;
+    },
+
+    removePerson(i) {
+        this.dropPerson(i);
+        this.closeSheet();
+        this.refreshAll();
+    },
+
+    /** Toque numa aba: troca de pessoa; na aba já ativa, abre para renomear. */
+    /** Unidades do item que nenhuma outra pessoa marcou (itens divididos não entram). */
+    freeQty(it) {
+        let taken = 0;
+        for (let i = 0; i < this.state.people.length; i++) {
+            if (i === this.state.active) continue;
+            const p = this.pickOf(it, i);
+            if (p.sel > 0 && p.split > 1) return 0;
+            taken += p.sel;
+        }
+        return Math.max(0, it.quantity - taken);
+    },
+
+    pickPerson(i) {
+        if (!this.state.people[i]) return;
+        if (i === this.state.active) return this.openSheet({ type: 'person', index: i });
+        this.switchPerson(i);
+        this.refreshAll();
+        this.focusAfterRefresh(`.person-tab[data-index="${i}"]`);
+    },
+
+    savePersonForm(form) {
+        const i = this.state.sheet?.index;
+        const person = this.state.people[i];
+        if (!person) return this.closeSheet();
+        const name = form.elements.name.value.replace(/\s+/g, ' ').trim().slice(0, 40);
+        const errorEl = form.querySelector('#personFormError');
+        const taken = this.state.people.some((p, k) => k !== i && p.name.toLowerCase() === name.toLowerCase());
+        const error = !name ? 'Informe um nome.' : taken ? 'Já tem alguém com esse nome.' : '';
+        if (error) {
+            errorEl.textContent = error;
+            errorEl.hidden = false;
+            return;
+        }
+        person.name = name;
+        this.closeSheet();
+        this.refreshAll();
+    },
+
+    focusAfterRefresh(selector) {
+        this.root.querySelector(selector)?.focus();
     },
 
     // =====================================================
@@ -566,7 +791,20 @@ const App = {
 
         if (sheet.type === 'share') {
             root.innerHTML = Components.shareSheet(this.shareView());
-            this.$('[data-action="share-whatsapp"]')?.focus();
+            // Trocar "Só a minha"/"Todos" não deve repetir a animação de abertura
+            if (sheet.focusMode) root.querySelectorAll('.sheet-scrim, .sheet').forEach(el => { el.style.animation = 'none'; });
+            this.$(sheet.focusMode
+                ? `[data-action="share-mode"][data-mode="${sheet.mode}"]`
+                : '[data-action="share-whatsapp"]')?.focus();
+        } else if (sheet.type === 'person') {
+            root.innerHTML = Components.personSheet({
+                index: sheet.index,
+                name: this.personName(sheet.index),
+                canRemove: this.multi()
+            });
+            const input = this.$('#pName');
+            input?.focus();
+            input?.select();
         } else if (sheet.type === 'item') {
             const item = sheet.id ? this.findItem(sheet.id) : null;
             root.innerHTML = Components.itemSheet(item);
@@ -586,27 +824,58 @@ const App = {
     // =====================================================
     // Compartilhar
     // =====================================================
+    shareMode() {
+        return this.multi() && this.state.sheet?.mode === 'all' ? 'all' : 'one';
+    },
+
+    /** Linhas da parte da pessoa i: itens, desconto e serviço. */
+    personLines(i) {
+        const r = this.state.receipt;
+        const t = this.totals(i);
+        const items = r.items.map(it => ({ it, p: this.pickOf(it, i) })).filter(x => x.p.sel > 0).map(({ it, p }) => ({
+            it, p, value: p.sel * it.unitPrice / p.split
+        }));
+        return { t, items };
+    },
+
     shareView() {
         const r = this.state.receipt;
-        const t = this.totals();
-        const lines = r.items.filter(it => it.sel > 0).map(it => {
-            const notes = [];
-            if (it.quantity > 1 && it.sel < it.quantity) notes.push(`${it.sel} de ${it.quantity}`);
-            else if (it.sel > 1) notes.push(`${it.sel}x`);
-            if (it.split > 1) notes.push(`÷ ${it.split}`);
-            if (it.discount > 0) notes.push('c/ desconto');
+        const mode = this.shareMode();
+        const blockFor = (i) => {
+            const { t, items } = this.personLines(i);
+            const lines = items.map(({ it, p, value }) => {
+                const notes = [];
+                if (it.quantity > 1 && p.sel < it.quantity) notes.push(`${p.sel} de ${it.quantity}`);
+                else if (p.sel > 1) notes.push(`${p.sel}x`);
+                if (p.split > 1) notes.push(`÷ ${p.split}`);
+                if (it.discount > 0) notes.push('c/ desconto');
+                return {
+                    label: notes.length ? `${it.name} (${notes.join(', ')})` : it.name,
+                    value: Fmt.brl(value)
+                };
+            });
+            if (t.myDiscount > 0.004) lines.push({ label: 'Desconto da conta (proporcional)', value: `−${Fmt.brl(t.myDiscount)}` });
+            if (t.pct > 0) lines.push({ label: `Serviço ${Fmt.num(t.pct)}%`, value: Fmt.brl(t.tipAmount) });
+            const name = this.personName(i);
             return {
-                label: notes.length ? `${it.name} (${notes.join(', ')})` : it.name,
-                value: Fmt.brl(this.itemShare(it))
+                heading: this.multi() && mode === 'all' ? name : '',
+                lines,
+                totalLabel: name === ME ? 'Minha parte' : this.partLabel(i),
+                total: Fmt.brl(t.total)
             };
-        });
-        if (t.myDiscount > 0.004) lines.push({ label: 'Desconto da conta (proporcional)', value: `−${Fmt.brl(t.myDiscount)}` });
-        if (t.pct > 0) lines.push({ label: `Serviço ${Fmt.num(t.pct)}%`, value: Fmt.brl(t.tipAmount) });
+        };
+        const indexes = mode === 'all' ? this.state.people.map((_, i) => i) : [this.state.active];
+        const blocks = indexes.map(blockFor).filter((b, k) => mode === 'one' || b.lines.length || k === 0);
+        const one = this.personName(this.state.active);
 
         return {
             title: r.date ? `${r.title} · ${r.date}` : r.title,
-            lines,
-            total: Fmt.brl(t.total),
+            heading: mode === 'all' ? 'Enviar a parte de todos' : one === ME ? 'Enviar sua parte' : `Enviar parte de ${one}`,
+            blocks,
+            multi: this.multi(),
+            mode,
+            oneLabel: one === ME ? 'Só a minha' : `Só ${one}`,
+            left: mode === 'all' && this.unassigned() > 0.05 ? Fmt.brl(this.unassigned()) : '',
             pixOn: STORAGE.get('divup.pixOn', '0') === '1',
             pixKey: STORAGE.get('divup.pixKey', ''),
             canNativeShare: typeof navigator.share === 'function',
@@ -621,7 +890,6 @@ const App = {
     shareText() {
         const W = 28;
         const r = this.state.receipt;
-        const t = this.totals();
         const money = Fmt.money;
         const clean = (s) => String(s).replace(/[`*_~]/g, '').replace(/\s+/g, ' ').trim();
         const fit = (s, max) => (s.length <= max ? s : s.slice(0, Math.max(1, max - 1)).trimEnd() + '…');
@@ -630,24 +898,44 @@ const App = {
             return left + ' '.repeat(Math.max(1, W - left.length - value.length)) + value;
         };
 
-        const rows = r.items.filter(it => it.sel > 0).map(it => {
-            const notes = [];
-            if (it.quantity > 1 && it.sel < it.quantity) notes.push(`${it.sel}/${it.quantity}`);
-            else if (it.sel > 1) notes.push(`${it.sel}x`);
-            if (it.split > 1) notes.push(`÷${it.split}`);
-            const note = notes.length ? ' ' + notes.join(' ') : '';
-            const value = money(this.itemShare(it));
-            // Corta o nome, nunca as anotações (÷2, 2/4)
-            const name = fit(Fmt.sentenceCase(clean(it.name)), W - value.length - 1 - note.length);
-            return row(name + note, value);
-        });
-        if (t.myDiscount > 0.004) rows.push(row('Desconto da conta', '-' + money(t.myDiscount)));
-        if (t.pct > 0) rows.push(row(`Serviço ${Fmt.num(t.pct)}%`, money(t.tipAmount)));
-        rows.push('-'.repeat(W));
-        rows.push(row('MINHA PARTE', Fmt.brl(t.total)));
+        const mode = this.shareMode();
+        const block = (i, withName) => {
+            const { t, items } = this.personLines(i);
+            const rows = items.map(({ it, p, value }) => {
+                const notes = [];
+                if (it.quantity > 1 && p.sel < it.quantity) notes.push(`${p.sel}/${it.quantity}`);
+                else if (p.sel > 1) notes.push(`${p.sel}x`);
+                if (p.split > 1) notes.push(`÷${p.split}`);
+                const note = notes.length ? ' ' + notes.join(' ') : '';
+                const v = money(value);
+                // Corta o nome, nunca as anotações (÷2, 2/4)
+                const name = fit(Fmt.sentenceCase(clean(it.name)), W - v.length - 1 - note.length);
+                return row(name + note, v);
+            });
+            if (t.myDiscount > 0.004) rows.push(row('Desconto da conta', '-' + money(t.myDiscount)));
+            if (t.pct > 0) rows.push(row(`Serviço ${Fmt.num(t.pct)}%`, money(t.tipAmount)));
+            rows.push('-'.repeat(W));
+            const name = clean(this.personName(i));
+            const label = withName ? 'A PAGAR' : name === ME ? 'MINHA PARTE' : `PARTE DE ${name.toUpperCase()}`;
+            rows.push(row(label, Fmt.brl(t.total)));
+            if (withName) rows.unshift(`▸ ${fit(name === ME ? 'Eu' : name, W - 2)}`);
+            return { rows, total: t.total, any: t.any };
+        };
+
+        let body;
+        if (mode === 'all') {
+            const blocks = this.state.people.map((_, i) => block(i, true)).filter((b, i) => b.any || i === 0);
+            body = blocks.map(b => b.rows.join('\n')).join('\n\n');
+            const sum = blocks.reduce((acc, b) => acc + b.total, 0);
+            body += `\n\n${'='.repeat(W)}\n${row('TOTAL', Fmt.brl(sum))}`;
+            const left = this.unassigned();
+            if (left > 0.05) body += `\n${row('Sem dono', money(left))}`;
+        } else {
+            body = block(this.state.active, false).rows.join('\n');
+        }
 
         const title = `🧾 *${Fmt.titleCase(clean(r.title))}*` + (r.date ? ` · ${r.date}` : '');
-        let text = `${title}\n\n\`\`\`\n${rows.join('\n')}\n\`\`\``;
+        let text = `${title}\n\n\`\`\`\n${body}\n\`\`\``;
 
         const pixKey = (this.$('#pixKey')?.value ?? STORAGE.get('divup.pixKey', '')).trim();
         const pixOn = this.$('#pixToggle')?.checked ?? STORAGE.get('divup.pixOn', '0') === '1';
@@ -680,7 +968,7 @@ const App = {
 
     async shareNative() {
         try {
-            await navigator.share({ title: 'Minha parte da conta', text: this.shareText() });
+            await navigator.share({ title: this.shareMode() === 'all' ? 'Divisão da conta' : this.partLabel(), text: this.shareText() });
         } catch (err) {
             if (err.name !== 'AbortError') this.toast('Não foi possível compartilhar');
         }
@@ -826,15 +1114,30 @@ const App = {
                 split: it.split
             })),
             tip: { ...this.state.tip, custom: String(this.state.tip.custom || '') },
-            my_total: Fmt.round2(this.totals().total)
+            ...this.peopleEntry(),
+            // No histórico, conta a parte de quem está logado ("Você", a primeira pessoa)
+            my_total: Fmt.round2(this.totals(0).total)
         };
+    },
+
+    peopleEntry() {
+        const ids = new Set((this.state.receipt?.items || []).map(it => String(it.id)));
+        const people = this.state.people.map((p, i) => {
+            const picks = {};
+            for (const it of this.state.receipt.items) {
+                const pick = this.pickOf(it, i);
+                if (pick.sel > 0 && ids.has(String(it.id))) picks[String(it.id)] = pick;
+            }
+            return { name: p.name, picks };
+        });
+        return { people, active: this.state.active };
     },
 
     /** Salva a conta atual se houver login e algo marcado. Silencioso em caso de erro. */
     async saveToHistory({ keepalive = false } = {}) {
         const r = this.state.receipt;
         if (!this.state.user || !r || this.state.screen !== 'receipt') return;
-        if (!r.items.some(it => it.sel > 0)) return;
+        if (!this.state.people.some((_, i) => this.totals(i).any)) return;
         const entry = this.historyEntry();
         const json = JSON.stringify(entry);
         if (json === this.state.lastSaved) return;
@@ -910,11 +1213,28 @@ const App = {
                 items: p.items.map(it => ({ ...it, listUnitPrice: it.listUnitPrice || it.unitPrice, discount: it.discount || 0 }))
             };
             this.state.tip = { mode: p.tip.mode, preset: p.tip.preset, custom: p.tip.custom || '' };
+            this.restorePeople(p);
             this.state.editing = false;
             this.state.lastSaved = JSON.stringify(this.historyEntry());
             this.go('receipt');
         } catch (error) {
             this.toast(error.message || 'Não foi possível abrir essa conta');
+        }
+    },
+
+    /** Contas salvas antes das várias pessoas só têm sel/split nos itens. */
+    restorePeople(p) {
+        const people = Array.isArray(p.people) ? p.people.filter(x => x && typeof x.name === 'string') : [];
+        if (!people.length) return this.resetPeople();
+        this.state.people = people.map(x => ({ name: x.name, picks: { ...(x.picks || {}) } }));
+        const active = Number.isInteger(p.active) && p.active < people.length ? p.active : 0;
+        this.state.active = active;
+        // Os itens já vêm com sel/split da pessoa ativa; garante consistência com picks
+        const picks = this.state.people[active].picks;
+        for (const it of this.state.receipt.items) {
+            const pick = picks[it.id];
+            it.sel = pick ? Math.min(pick.sel, it.quantity) : 0;
+            it.split = pick ? pick.split : 1;
         }
     },
 
