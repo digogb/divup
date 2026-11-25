@@ -204,21 +204,48 @@ a.btn, a.btn-text { text-decoration: none; }
 .mini-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; color: var(--muted); border-radius: 8px; }
 .mini-row.on { background: var(--soft); color: var(--soft-ink); font-weight: 600; }
 .mini-row span:first-child { display: flex; align-items: center; gap: 6px; }
-.mini-total { border-top: 1.5px dashed var(--dash); margin-top: 4px; padding: 10px 8px 0; display: flex; justify-content: space-between; align-items: baseline; color: var(--muted); }
-.mini-total strong { font-family: var(--font-display); font-size: 18px; background: var(--hl); color: var(--on-hl); padding: 0 6px; border-radius: 6px; }
+/* Canhoto: o rodapé "Sua parte" da notinha em amarelo */
+.mini-total { background: var(--hl); color: var(--on-hl); border-radius: 8px; margin-top: 8px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: baseline; }
+.mini-total strong { font-family: var(--font-display); font-size: 18px; }
 
 /* Cartão tem ~310px de altura: encolhe quando aperta e some quando não cabe */
 @container (max-height: 340px) { .mini-receipt { transform: perspective(900px) rotateX(14deg) rotateY(-16deg) rotateZ(-3deg) scale(0.82); animation: none; } }
 @container (max-height: 280px) { .mini-receipt { transform: perspective(900px) rotateX(12deg) rotateY(-14deg) rotateZ(-2deg) scale(0.66); animation: none; } }
-@container (max-height: 220px) { .mini-receipt { display: none; } }
+@container (max-height: 220px) { .mini-receipt { transform: perspective(900px) rotateX(10deg) rotateY(-12deg) rotateZ(-2deg) scale(0.52); animation: none; } }
+@container (max-height: 175px) { .mini-receipt { transform: perspective(900px) rotateX(8deg) rotateY(-10deg) rotateZ(-2deg) scale(0.42); } }
+@container (max-height: 130px) { .mini-receipt { display: none; } }
 /* Navegadores sem container queries: some em telas baixas */
 @supports not (container-type: size) {
     @media (max-height: 760px) { .home-hero { visibility: hidden; } }
 }
 
+/* Resumo de quem já usa o app (no lugar da notinha) */
+.home-summary { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+.sum-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--sh-raised), var(--edge); }
+.sum-stub { background: var(--hl); color: var(--on-hl); border-radius: 12px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.sum-stub-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sum-stub-text span { font-size: 13px; font-weight: 500; }
+.sum-stub-text strong { font-family: var(--font-display); font-weight: 700; font-size: 28px; letter-spacing: -0.02em; line-height: 1.1; }
+.sum-count { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.sum-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 8px 6px 8px 12px; border-radius: 12px; text-align: left; color: var(--ink); }
+.sum-row:active { background: var(--bg); }
+.sum-row svg { color: var(--muted); }
+.sum-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sum-row-label { font-size: 12px; color: var(--muted); }
+.sum-row-text strong { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sum-row-text span:last-child { font-size: 13px; color: var(--muted); }
+.sum-row-value { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sum-link { align-self: flex-start; padding: 0 12px; }
 .home-copy h1 { font-family: var(--font-display); font-weight: 700; font-size: 32px; line-height: 1.08; letter-spacing: -0.025em; }
 .home-copy p { margin-top: 10px; font-size: 16px; line-height: 1.5; color: var(--muted); }
 .home-actions { display: flex; flex-direction: column; gap: 10px; }
+/* Tela baixa: título e espaços menores para caber resumo ou notinha */
+@media (max-height: 700px) {
+    .home { gap: 20px; padding-top: calc(var(--safe-top) + 24px); }
+    .home-copy h1 { font-size: 28px; }
+    .home-copy p { font-size: 15px; }
+}
+
 /* Bar parceiro (QR Code da mesa) */
 .home-copy .home-casa strong { color: var(--on-hl); }
 .home-copy .home-casa {
@@ -658,14 +685,16 @@ a.btn, a.btn-text { text-decoration: none; }
     50% { transform: perspective(900px) rotateX(10deg) rotateY(-10deg) rotateZ(-2deg) translateY(-6px); }
 }
 
-/* Marca-texto (acento amarelo, sempre com texto escuro) */
-.total-value { background: var(--hl); color: var(--on-hl); padding: 0 8px; border-radius: 8px; align-self: flex-start; width: fit-content; }
-.is-selected .item-price .price { text-decoration: underline; text-decoration-color: var(--hl); text-decoration-thickness: 4px; text-underline-offset: 4px; text-decoration-skip-ink: none; }
-.person-tab[aria-pressed="true"] .person-total { background: var(--hl); color: var(--on-hl); border-radius: 4px; padding: 0 4px; width: fit-content; }
+/* Acento amarelo (sempre com texto escuro).
+   Divisão: o botão que envia e o check dos seus itens. Início: o canhoto "Sua parte". Selos: bar, "Tudo marcado", scanner. */
+.btn-accent { background: var(--hl); color: var(--on-hl); box-shadow: 0 4px 0 color-mix(in srgb, var(--hl) 55%, #000), var(--sh-raised); }
+.btn-accent:hover:not(:disabled) { background: #F5B800; }
+.btn-accent:active:not(:disabled) { box-shadow: 0 1px 0 color-mix(in srgb, var(--hl) 55%, #000); }
+.btn-accent:disabled { background: var(--line); color: var(--muted); box-shadow: none; }
+.is-selected .check { background: var(--hl); border-color: var(--hl); color: var(--on-hl); }
 .hint-done { background: var(--hl); color: var(--on-hl); border-radius: 999px; padding: 2px 10px; font-weight: 600; }
 .hint-done svg { color: var(--on-hl); }
 .scanline { background: var(--hl); box-shadow: 0 0 0 4px color-mix(in srgb, var(--hl) 30%, transparent), 0 0 24px var(--hl); }
-.share-total strong { background: var(--hl); color: var(--on-hl); border-radius: 6px; padding: 0 6px; }
 /* Histórico: total do mês marcado; valor de cada conta com o traço */
 .history-month strong { background: var(--hl); color: var(--on-hl); border-radius: 6px; padding: 0 6px; }
 .history-total { text-decoration: underline; text-decoration-color: var(--hl); text-decoration-thickness: 3px; text-underline-offset: 4px; text-decoration-skip-ink: none; }

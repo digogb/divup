@@ -91,7 +91,7 @@ const Components = {
         return `<span class="avatar" style="width:${size}px;height:${size}px">${initial}</span>`;
     },
 
-    homeScreen(user, canLogin, casa) {
+    homeScreen(user, canLogin, casa, summary) {
         return `
             <main class="screen home">
                 <div class="home-top">
@@ -101,7 +101,7 @@ const Components = {
                         : canLogin ? `<button class="btn-text" data-action="open-account">Entrar</button>` : ''}
                 </div>
 
-                <div class="home-hero" aria-hidden="true">
+                ${summary ? this.homeSummary(summary) : `<div class="home-hero" aria-hidden="true">
                     <div class="mini-receipt">
                         <div class="mini-receipt-title">SUA CONTA</div>
                         <div class="mini-row on"><span>${Icons.checkSmall}Entrada (÷ 2)</span><span>24,50</span></div>
@@ -111,7 +111,7 @@ const Components = {
                         <div class="mini-row on"><span>${Icons.checkSmall}Café</span><span>7,50</span></div>
                         <div class="mini-total"><span>Sua parte</span><strong>R$ 47,30</strong></div>
                     </div>
-                </div>
+                </div>`}
 
                 <div class="home-copy">
                     <h1>Cada um paga o que consumiu.</h1>
@@ -124,10 +124,37 @@ const Components = {
                     <input type="file" id="galleryInput" class="file-input" accept="image/*">
                     <button class="btn btn-primary" data-action="camera">${Icons.camera}Fotografar conta</button>
                     <button class="btn btn-secondary" data-action="gallery">${Icons.gallery}Escolher da galeria</button>
-                    ${user ? `<button class="btn-text home-history" data-action="open-history">${Icons.history}Ver histórico</button>` : ''}
+                    ${user && !summary ? `<button class="btn-text home-history" data-action="open-history">${Icons.history}Ver histórico</button>` : ''}
                 </div>
             </main>
             <div id="sheetRoot"></div>
+        `;
+    },
+
+    /** Quem já tem contas no histórico: o mês mais recente no lugar da notinha. */
+    homeSummary(s) {
+        return `
+            <section class="home-summary" aria-label="Suas contas em ${Fmt.esc(s.month)}">
+                <div class="sum-card">
+                    <div class="sum-stub">
+                        <div class="sum-stub-text">
+                            <span>Sua parte em ${Fmt.esc(s.month)}</span>
+                            <strong>${s.total}</strong>
+                        </div>
+                        <span class="sum-count">${s.count === 1 ? '1 conta' : `${s.count} contas`}</span>
+                    </div>
+                    <button class="sum-row" data-action="open-saved" data-id="${Fmt.esc(s.last.id)}">
+                        <span class="sum-row-text">
+                            <span class="sum-row-label">Última conta</span>
+                            <strong>${Fmt.esc(s.last.title)}</strong>
+                            <span>${Fmt.esc(s.last.date)}</span>
+                        </span>
+                        <span class="sum-row-value">${s.last.total}</span>
+                        ${Icons.chevron}
+                    </button>
+                    <button class="btn-text sum-link" data-action="open-history">${Icons.history}Ver histórico</button>
+                </div>
+            </section>
         `;
     },
 
@@ -329,7 +356,7 @@ const Components = {
                     <span class="total-value" id="totalValue">${f.total}</span>
                     <span class="total-detail" id="totalDetail">${f.detail}</span>
                 </div>
-                <button class="btn btn-primary" data-action="open-share" id="btnSend" ${f.any ? '' : 'disabled'}>${Icons.send}Enviar</button>
+                <button class="btn btn-primary btn-accent" data-action="open-share" id="btnSend" ${f.any ? '' : 'disabled'}>${Icons.send}Enviar</button>
             </div>
         `;
     },
@@ -382,7 +409,7 @@ const Components = {
                         : `<button class="btn-text" data-action="open-account">${Icons.history}Entre com Google para guardar suas contas</button>`}
 
                     <div class="sheet-actions">
-                        <button class="btn btn-primary" data-action="share-whatsapp">${Icons.chat}Enviar no WhatsApp</button>
+                        <button class="btn btn-primary btn-accent" data-action="share-whatsapp">${Icons.chat}Enviar no WhatsApp</button>
                         <button class="btn btn-secondary" data-action="share-copy">${Icons.copy}Copiar texto</button>
                         ${s.canNativeShare ? `<button class="btn btn-secondary" data-action="share-native">${Icons.more}Outros apps</button>` : ''}
                     </div>

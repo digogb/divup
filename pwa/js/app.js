@@ -91,7 +91,7 @@ const App = {
         const s = this.state;
         let html = '';
         switch (s.screen) {
-            case 'home': html = Components.homeScreen(s.user, !!s.authConfig?.google_client_id, API.activeCasa()); break;
+            case 'home': html = Components.homeScreen(s.user, !!s.authConfig?.google_client_id, API.activeCasa(), this.homeSummaryView()); break;
             case 'history': html = Components.historyScreen(this.historyView()); break;
             case 'loading': html = Components.loadingScreen(s.loading.photoUrl, s.loading.step); break;
             case 'receipt': html = Components.receiptScreen(this.receiptView()); break;
@@ -106,6 +106,30 @@ const App = {
         this.state.screen = screen;
         this.state.sheet = null;
         this.render();
+        if (screen === 'home') this.refreshHomeSummary();
+    },
+
+    /** Resumo do mês mais recente do histórico, para a tela inicial de quem já usa o app. */
+    homeSummaryView() {
+        if (!this.state.user || !this.state.history.items.length) return null;
+        const group = this.historyView().groups[0];
+        if (!group?.rows.length) return null;
+        const last = group.rows[0];
+        return {
+            month: group.label.split(' de ')[0].toLowerCase(),
+            total: group.total,
+            count: group.rows.length,
+            last: { id: last.id, title: last.title, date: last.date, total: last.total }
+        };
+    },
+
+    async refreshHomeSummary() {
+        if (!this.state.user || this.state.history.loading) return;
+        try {
+            const { receipts } = await API.listHistory();
+            this.state.history = { ...this.state.history, error: '', items: receipts };
+            if (this.state.screen === 'home' && !this.state.sheet) this.render();
+        } catch { /* sem resumo: a tela inicial mostra a notinha */ }
     },
 
     // =====================================================
@@ -568,7 +592,8 @@ const App = {
     },
 
     newReceipt() {
-        this.saveToHistory();
+        // A conta recém-salva entra no resumo da tela inicial
+        this.saveToHistory().finally(() => this.refreshHomeSummary());
         this.state.receipt = null;
         this.resetPeople();
         this.state.editing = false;
@@ -1097,6 +1122,7 @@ const App = {
             this.state.user = me.user;
             this.state.authConfig = config;
             if (this.state.screen === 'home' && !this.state.sheet) this.render();
+            if (me.user) this.refreshHomeSummary();
         } catch (error) {
             console.warn('Sessão indisponível:', error);
         }
