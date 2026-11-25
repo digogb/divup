@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     SESSION_SECRET: str = ""
     SESSION_DAYS: int = 90
 
+    # Leitura das notas (Gemini). gemini-2.5-flash é desligado em 2026-12-01.
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
+    # Preço do modelo (US$ por milhão de tokens) e câmbio, para estimar o custo de cada leitura
+    PRICE_IN_USD_PER_M: float = 0.30
+    PRICE_OUT_USD_PER_M: float = 2.50
+    USD_BRL: float = 5.50
+
     # Banco SQLite do histórico
     DATA_DIR: str = "/app/data"
 

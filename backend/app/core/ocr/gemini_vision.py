@@ -1,15 +1,21 @@
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 from PIL import Image, ImageOps
 import io
 import json
 from app.models.receipt import ReceiptData, ReceiptItem
+from app.core.config import settings
+from app.core.pricing import cost_brl
 import os
+import time
 
 # Lado maior máximo enviado ao Gemini. Suficiente para ler notas fiscais
 # e reduz drasticamente o payload de fotos de celular (12MP+).
 MAX_IMAGE_SIDE = 1600
 JPEG_QUALITY = 85
+# Pausas entre novas tentativas quando o Gemini responde 503 ("alta demanda")
+RETRY_DELAYS_S = (1.0, 2.5)
 
 PROMPT = """
 Analise esta nota fiscal e extraia os itens, o nome do estabelecimento e a data.
@@ -91,40 +97,57 @@ class GeminiVisionExtractor:
 
         self.client = genai.Client(api_key=api_key)
 
-    def extract(self, image_bytes: bytes) -> ReceiptData:
+    def extract(self, image_bytes: bytes, model: str | None = None) -> tuple[ReceiptData, dict]:
         """
         Extrai dados estruturados de uma nota fiscal usando Gemini Vision.
 
         Args:
             image_bytes: Conteúdo da imagem (JPEG ou PNG)
+            model: modelo a usar; padrão settings.GEMINI_MODEL
 
         Returns:
-            ReceiptData com itens extraídos
+            (ReceiptData, usage) — usage = {model, tokens_in, tokens_out, cost_brl}
         """
         original_size = len(image_bytes)
         image_data = prepare_image(image_bytes)
         print(f"🖼️  Imagem: {original_size // 1024} KB -> {len(image_data) // 1024} KB")
 
-        response = self.client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[
-                PROMPT,
-                types.Part(
-                    inline_data=types.Blob(
-                        mime_type="image/jpeg",
-                        data=image_data
-                    )
-                )
-            ],
-            config=types.GenerateContentConfig(
-                # Leitura de nota não precisa de "raciocínio"; o thinking
-                # ligado por padrão no 2.5-flash adiciona vários segundos.
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
-                # Força saída JSON pura (sem ```json ... ```)
-                response_mime_type="application/json",
-                temperature=0,
-            ),
+        model = model or settings.GEMINI_MODEL
+        contents = [
+            PROMPT,
+            types.Part(inline_data=types.Blob(mime_type="image/jpeg", data=image_data)),
+        ]
+        config = types.GenerateContentConfig(
+            # Força saída JSON pura (sem ```json ... ```)
+            response_mime_type="application/json",
+            temperature=0,
         )
+        if model.startswith("gemini-2."):
+            # No 2.x o thinking vem ligado e adiciona vários segundos; leitura de
+            # nota não precisa dele. O 3.5-flash-lite recusa este parâmetro (400).
+            config.thinking_config = types.ThinkingConfig(thinking_budget=0)
+        for delay in (*RETRY_DELAYS_S, None):
+            try:
+                response = self.client.models.generate_content(model=model, contents=contents, config=config)
+                break
+            except genai_errors.ServerError as e:
+                # 503 de demanda é passageiro: espera um pouco e tenta de novo
+                if delay is None or getattr(e, "code", None) not in (500, 503):
+                    raise
+                print(f"⏳ {model} respondeu {e.code}; nova tentativa em {delay}s")
+                time.sleep(delay)
+
+        meta = response.usage_metadata
+        tokens_in = (meta.prompt_token_count or 0) if meta else 0
+        # A saída cobrada inclui os tokens de "raciocínio", quando houver
+        tokens_out = ((meta.candidates_token_count or 0) + (meta.thoughts_token_count or 0)) if meta else 0
+        usage = {
+            "model": model,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "cost_brl": cost_brl(tokens_in, tokens_out),
+        }
+        print(f"💰 {model}: {tokens_in} tokens de entrada, {tokens_out} de saída ≈ R$ {usage['cost_brl']:.4f}")
 
         response_text = (response.text or "").strip()
 
@@ -166,7 +189,7 @@ class GeminiVisionExtractor:
             confidence_score=0.98,
             establishment_name=est_name,
             date=date_str
-        )
+        ), usage
 
 
 def to_float(value) -> float:

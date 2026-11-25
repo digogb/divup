@@ -30,7 +30,7 @@ def process_receipt(file: UploadFile = File(...), client_info: str | None = Form
             print(f"📱 Cliente: {client_info[:400]}")
 
         # Processar OCR
-        receipt_data, processing_time = receipt_service.process_receipt_image(content)
+        receipt_data, processing_time, usage = receipt_service.process_receipt_image(content)
         
         # DEBUG: Verificar quantos itens estão sendo retornados
         print(f"\n📤 RESPOSTA HTTP: Enviando {len(receipt_data.items)} itens para o cliente")
