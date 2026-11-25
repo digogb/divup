@@ -399,8 +399,6 @@ const App = {
         this.$('#btnBulk').textContent = this.bulkLabel(t.any);
         this.$('#listHint').innerHTML = this.listHintHtml();
         this.refreshPeople();
-        const customChip = this.root.querySelector('.chip[data-tip="custom"]');
-        if (customChip && this.state.tip.mode === 'custom') customChip.textContent = `${Fmt.num(t.pct)}%`;
     },
 
     // =====================================================

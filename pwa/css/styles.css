@@ -500,22 +500,23 @@ a.btn, a.btn-text { text-decoration: none; }
     color: var(--ink);
     border: 1px solid var(--control);
 }
-.chip[aria-pressed="true"] { background: var(--soft); color: var(--soft-ink); border: 2px solid var(--accent); }
+.chip[aria-pressed="true"], .chip.is-on { background: var(--soft); color: var(--soft-ink); border: 2px solid var(--accent); }
 
-.custom-tip { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -4px; }
-.custom-tip > span { font-size: 13px; color: var(--muted); }
-.custom-tip-field { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.custom-tip input {
-    width: 76px; height: 44px;
-    border-radius: 12px;
-    border: 1.5px solid var(--accent);
-    background: var(--bg);
-    font-size: 16px;
-    font-weight: 600;
+/* "Outro" escolhido: o chip vira o campo do percentual */
+.chip-custom { display: inline-flex; align-items: center; justify-content: center; gap: 1px; cursor: text; }
+.chip-custom input {
+    width: 3.2ch;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 16px; /* 16px evita o zoom automático do iOS ao focar */
     text-align: right;
-    padding: 0 12px;
 }
-.custom-tip input:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.chip-custom input:focus { outline: none; }
+.chip-custom:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 
 .total-block { display: flex; flex-direction: column; min-width: 0; }
 .total-block .label { font-size: 13px; color: var(--muted); }
@@ -641,7 +642,7 @@ a.btn, a.btn-text { text-decoration: none; }
 .check-strip, .history-row, .chip, .step-btn, .person-tab { box-shadow: var(--sh-flat), var(--edge); }
 .item.is-taken { box-shadow: none; }
 /* elevado: o que está escolhido sobe */
-.person-tab[aria-pressed="true"], .chip[aria-pressed="true"] { box-shadow: var(--sh-raised), var(--edge); transform: translateY(-2px); }
+.person-tab[aria-pressed="true"], .chip[aria-pressed="true"], .chip.is-on { box-shadow: var(--sh-raised), var(--edge); transform: translateY(-2px); }
 /* flutuante: rodapé com o total, folhas e avisos */
 .footer { box-shadow: var(--sh-footer); border-top-color: transparent; position: relative; z-index: 2; }
 .sheet, .toast { box-shadow: var(--sh-float); }
@@ -665,6 +666,9 @@ a.btn, a.btn-text { text-decoration: none; }
 .hint-done svg { color: var(--on-hl); }
 .scanline { background: var(--hl); box-shadow: 0 0 0 4px color-mix(in srgb, var(--hl) 30%, transparent), 0 0 24px var(--hl); }
 .share-total strong { background: var(--hl); color: var(--on-hl); border-radius: 6px; padding: 0 6px; }
+/* Histórico: total do mês marcado; valor de cada conta com o traço */
+.history-month strong { background: var(--hl); color: var(--on-hl); border-radius: 6px; padding: 0 6px; }
+.history-total { text-decoration: underline; text-decoration-color: var(--hl); text-decoration-thickness: 3px; text-underline-offset: 4px; text-decoration-skip-ink: none; }
 
 /* Moldura fina só enquanto vale o QR Code de um bar parceiro ("leitura cortesia do bar") */
 html.casa-ativa::after {

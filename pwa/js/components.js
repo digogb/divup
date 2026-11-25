@@ -308,7 +308,13 @@ const Components = {
     },
 
     footer(f) {
-        const chips = f.tips.map(tp => `
+        // "Outro" escolhido: o próprio chip vira o campo do percentual (sem linha extra)
+        const chips = f.tips.map(tp => tp.value === 'custom' && f.customOn ? `
+            <label class="chip chip-custom is-on">
+                <input id="customTip" type="text" inputmode="decimal" autocomplete="off" placeholder="0"
+                    value="${Fmt.esc(f.customValue)}" aria-label="Outro valor de serviço, em %">%
+            </label>
+        ` : `
             <button class="chip" data-action="tip" data-tip="${tp.value}" aria-pressed="${tp.on}">${tp.label}</button>
         `).join('');
 
@@ -317,14 +323,6 @@ const Components = {
                 <span class="label" id="tipLabel">Serviço</span>
                 <div class="chips" role="group" aria-labelledby="tipLabel">${chips}</div>
             </div>
-            ${f.customOn ? `
-                <label class="custom-tip">
-                    <span>Outro valor de serviço</span>
-                    <span class="custom-tip-field">
-                        <input id="customTip" type="text" inputmode="decimal" autocomplete="off" value="${Fmt.esc(f.customValue)}" aria-label="Percentual de serviço">
-                        %
-                    </span>
-                </label>` : ''}
             <div class="footer-row">
                 <div class="total-block" aria-live="polite">
                     <span class="label">${Fmt.esc(f.totalLabel)}</span>
