@@ -7,8 +7,8 @@ const urlsToCache = [
     '/js/api.js?v=20',
     '/js/components.js?v=20',
     '/js/theme.js?v=20',
-    '/assets/icons/icon-192.png',
-    '/assets/icons/icon.svg'
+    '/assets/icons/icon-192.png?v=20',
+    '/assets/icons/icon.svg?v=20'
 ];
 
 // Install event - cache static assets
