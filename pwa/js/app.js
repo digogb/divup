@@ -12,6 +12,7 @@ const MAX_PEOPLE = 12;
 const ME = 'Você';
 /** Nomes que querem dizer "eu" (quem está com o celular). */
 const isSelf = (name) => /^(voc[eê]|eu)$/i.test(String(name || '').trim());
+const CASA_HOURS = 6;      // quanto tempo vale o QR Code do bar depois de lido
 const STORAGE = {
     get(key, fallback) {
         try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch { return fallback; }
@@ -56,8 +57,30 @@ const App = {
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') this.saveToHistory({ keepalive: true });
         });
+        this.captureCasa();
         this.render();
         this.loadSession();
+    },
+
+    /**
+     * QR Code da mesa (?casa=<código>): guarda o bar por 6 horas e limpa a URL,
+     * para que um link salvo ou a PWA instalada não leve o código a outro bar.
+     */
+    captureCasa() {
+        const params = new URLSearchParams(location.search);
+        const slug = params.get('casa');
+        if (!slug) return;
+        params.delete('casa');
+        const query = params.toString();
+        history.replaceState(null, '', location.pathname + (query ? `?${query}` : '') + location.hash);
+        API.request('GET', `/casa/${encodeURIComponent(slug)}`)
+            .then((casa) => {
+                STORAGE.set('divup.casa', JSON.stringify({
+                    slug: casa.slug, name: casa.name, until: Date.now() + CASA_HOURS * 3600 * 1000
+                }));
+                if (this.state.screen === 'home' && !this.state.sheet) this.render();
+            })
+            .catch(() => { /* código inválido ou bar inativo: segue como leitura comum */ });
     },
 
     // =====================================================
@@ -67,7 +90,7 @@ const App = {
         const s = this.state;
         let html = '';
         switch (s.screen) {
-            case 'home': html = Components.homeScreen(s.user, !!s.authConfig?.google_client_id); break;
+            case 'home': html = Components.homeScreen(s.user, !!s.authConfig?.google_client_id, API.activeCasa()); break;
             case 'history': html = Components.historyScreen(this.historyView()); break;
             case 'loading': html = Components.loadingScreen(s.loading.photoUrl, s.loading.step); break;
             case 'receipt': html = Components.receiptScreen(this.receiptView()); break;

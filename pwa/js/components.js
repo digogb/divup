@@ -91,7 +91,7 @@ const Components = {
         return `<span class="avatar" style="width:${size}px;height:${size}px">${initial}</span>`;
     },
 
-    homeScreen(user, canLogin) {
+    homeScreen(user, canLogin, casa) {
         return `
             <main class="screen home">
                 <div class="home-top">
@@ -116,6 +116,7 @@ const Components = {
                 <div class="home-copy">
                     <h1>Cada um paga o que consumiu.</h1>
                     <p>Fotografe a conta, toque nos seus itens e mande sua parte no grupo.</p>
+                    ${casa ? `<p class="home-casa">Cortesia de <strong>${Fmt.esc(casa.name)}</strong> · leitura grátis</p>` : ''}
                 </div>
 
                 <div class="home-actions">

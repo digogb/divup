@@ -194,6 +194,17 @@ svg { flex-shrink: 0; }
 .home-copy h1 { font-family: var(--font-display); font-weight: 700; font-size: 32px; line-height: 1.08; letter-spacing: -0.025em; }
 .home-copy p { margin-top: 10px; font-size: 16px; line-height: 1.5; color: var(--muted); }
 .home-actions { display: flex; flex-direction: column; gap: 10px; }
+/* Bar parceiro (QR Code da mesa) */
+.home-copy .home-casa {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--soft);
+    color: var(--soft-ink);
+    font-size: 14px;
+    line-height: 1.4;
+}
 
 .file-input { display: none; }
 
