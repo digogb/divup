@@ -1,11 +1,11 @@
-const CACHE_NAME = 'divup-v14';
+const CACHE_NAME = 'divup-v15';
 const urlsToCache = [
     '/',
     '/index.html',
-    '/css/styles.css?v=14',
-    '/js/app.js?v=14',
-    '/js/api.js?v=14',
-    '/js/components.js?v=14',
+    '/css/styles.css?v=15',
+    '/js/app.js?v=15',
+    '/js/api.js?v=15',
+    '/js/components.js?v=15',
     '/assets/icons/icon-192.png',
     '/assets/icons/icon.svg'
 ];
@@ -41,8 +41,9 @@ self.addEventListener('activate', event => {
 
 // Fetch event - network first, fallback to cache
 self.addEventListener('fetch', event => {
-    // Skip API calls - always fetch from network
-    if (event.request.url.includes('/api/')) {
+    // API e área de admin: sempre da rede, nunca em cache
+    const { pathname } = new URL(event.request.url);
+    if (pathname.startsWith('/api/') || pathname === '/admin' || pathname.includes('/admin.')) {
         return;
     }
     
