@@ -98,6 +98,8 @@ const App = {
             case 'error': html = Components.errorScreen(s.errorMessage, s.errorLimit); break;
         }
         this.root.innerHTML = html;
+        // Moldura amarela enquanto vale o QR Code de um bar parceiro
+        document.documentElement.classList.toggle('casa-ativa', !!API.activeCasa());
     },
 
     go(screen) {

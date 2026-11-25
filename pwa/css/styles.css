@@ -26,7 +26,16 @@
     --danger-fill: #C0362C;
     --on-danger-fill: #FFFFFF;
     --scrim: rgba(21, 23, 28, 0.45);
-    --shadow: 0 1px 2px rgba(21, 23, 28, 0.06), 0 12px 32px rgba(21, 23, 28, 0.08);
+    /* Profundidade em 3 níveis (portfólio): plano (lista), elevado (escolhido), flutuante (rodapé, folhas) */
+    --sh-flat: 0 1px 2px rgba(21, 23, 28, 0.06);
+    --sh-raised: 0 2px 4px rgba(21, 23, 28, 0.06), 0 8px 20px rgba(21, 23, 28, 0.10);
+    --sh-float: 0 4px 8px rgba(21, 23, 28, 0.08), 0 20px 48px rgba(21, 23, 28, 0.20);
+    --sh-footer: 0 -10px 30px rgba(21, 23, 28, 0.10);
+    --edge: inset 0 0 0 0 transparent;  /* no escuro, filete claro no alto dos cartões */
+    --shadow: var(--sh-float);
+    /* Acento (10%): o marca-texto. Marca o que é seu ou o que ficou pronto; texto sempre escuro */
+    --hl: #FFC83C;
+    --on-hl: #15171C;
 
     --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-display: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
@@ -60,7 +69,11 @@
         --danger-fill: #E5584C;
         --on-danger-fill: #1A0503;
         --scrim: rgba(0, 0, 0, 0.6);
-        --shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+        --sh-flat: 0 1px 2px rgba(0, 0, 0, 0.5);
+        --sh-raised: 0 2px 4px rgba(0, 0, 0, 0.45), 0 10px 24px rgba(0, 0, 0, 0.55);
+        --sh-float: 0 6px 12px rgba(0, 0, 0, 0.5), 0 24px 56px rgba(0, 0, 0, 0.7);
+        --sh-footer: 0 -12px 32px rgba(0, 0, 0, 0.6);
+        --edge: inset 0 1px 0 rgba(255, 255, 255, 0.06);
         color-scheme: dark;
     }
 }
@@ -177,8 +190,11 @@ a.btn, a.btn-text { text-decoration: none; }
     background: var(--surface);
     border-radius: 14px;
     padding: 20px 18px 18px;
-    box-shadow: var(--shadow);
-    transform: rotate(-2.5deg);
+    /* 3D só aqui: pilha de recibos em perspectiva */
+    box-shadow: var(--sh-float),
+        14px 18px 0 -6px color-mix(in srgb, var(--surface) 85%, var(--ink)),
+        26px 32px 30px -8px rgba(21, 23, 28, 0.18);
+    transform: perspective(900px) rotateX(14deg) rotateY(-16deg) rotateZ(-3deg);
     font-size: 12px;
     display: flex;
     flex-direction: column;
@@ -189,11 +205,11 @@ a.btn, a.btn-text { text-decoration: none; }
 .mini-row.on { background: var(--soft); color: var(--soft-ink); font-weight: 600; }
 .mini-row span:first-child { display: flex; align-items: center; gap: 6px; }
 .mini-total { border-top: 1.5px dashed var(--dash); margin-top: 4px; padding: 10px 8px 0; display: flex; justify-content: space-between; align-items: baseline; color: var(--muted); }
-.mini-total strong { font-family: var(--font-display); font-size: 18px; color: var(--accent); }
+.mini-total strong { font-family: var(--font-display); font-size: 18px; background: var(--hl); color: var(--on-hl); padding: 0 6px; border-radius: 6px; }
 
 /* Cartão tem ~310px de altura: encolhe quando aperta e some quando não cabe */
-@container (max-height: 340px) { .mini-receipt { transform: rotate(-2.5deg) scale(0.82); } }
-@container (max-height: 280px) { .mini-receipt { transform: rotate(-2deg) scale(0.66); } }
+@container (max-height: 340px) { .mini-receipt { transform: perspective(900px) rotateX(14deg) rotateY(-16deg) rotateZ(-3deg) scale(0.82); animation: none; } }
+@container (max-height: 280px) { .mini-receipt { transform: perspective(900px) rotateX(12deg) rotateY(-14deg) rotateZ(-2deg) scale(0.66); animation: none; } }
 @container (max-height: 220px) { .mini-receipt { display: none; } }
 /* Navegadores sem container queries: some em telas baixas */
 @supports not (container-type: size) {
@@ -204,14 +220,16 @@ a.btn, a.btn-text { text-decoration: none; }
 .home-copy p { margin-top: 10px; font-size: 16px; line-height: 1.5; color: var(--muted); }
 .home-actions { display: flex; flex-direction: column; gap: 10px; }
 /* Bar parceiro (QR Code da mesa) */
+.home-copy .home-casa strong { color: var(--on-hl); }
 .home-copy .home-casa {
     display: inline-block;
     margin-top: 12px;
     padding: 6px 12px;
     border-radius: 999px;
-    background: var(--soft);
-    color: var(--soft-ink);
+    background: var(--hl);
+    color: var(--on-hl);
     font-size: 14px;
+    font-weight: 500;
     line-height: 1.4;
 }
 
@@ -380,10 +398,11 @@ a.btn, a.btn-text { text-decoration: none; }
     border-radius: 14px;
     border: 1.5px solid var(--line);
     background: var(--surface);
-    transition: background-color .15s ease, border-color .15s ease;
+    box-shadow: var(--sh-flat), var(--edge);
+    transition: background-color .15s ease, border-color .15s ease, transform .2s cubic-bezier(.2, .8, .2, 1), box-shadow .2s ease;
     flex-shrink: 0;
 }
-.item.is-selected { background: var(--soft); border-color: var(--accent); }
+.item.is-selected { background: var(--soft); border-color: var(--accent); box-shadow: var(--sh-raised), var(--edge); transform: translateY(-2px); }
 
 .item-main {
     width: 100%;
@@ -614,6 +633,49 @@ a.btn, a.btn-text { text-decoration: none; }
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
     overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
+
+/* ========================================
+   Profundidade e marca-texto
+======================================== */
+/* plano: lista e controles */
+.check-strip, .history-row, .chip, .step-btn, .person-tab { box-shadow: var(--sh-flat), var(--edge); }
+.item.is-taken { box-shadow: none; }
+/* elevado: o que está escolhido sobe */
+.person-tab[aria-pressed="true"], .chip[aria-pressed="true"] { box-shadow: var(--sh-raised), var(--edge); transform: translateY(-2px); }
+/* flutuante: rodapé com o total, folhas e avisos */
+.footer { box-shadow: var(--sh-footer); border-top-color: transparent; position: relative; z-index: 2; }
+.sheet, .toast { box-shadow: var(--sh-float); }
+/* botão principal com relevo; afunda ao toque */
+.btn-primary { box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 60%, #000), var(--sh-raised); }
+.btn-primary:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 60%, #000); }
+.btn-primary:disabled { box-shadow: none; }
+/* a pilha de recibos flutua devagar */
+@media (prefers-reduced-motion: no-preference) {
+    .mini-receipt { animation: receipt-float 6s ease-in-out infinite; }
+}
+@keyframes receipt-float {
+    50% { transform: perspective(900px) rotateX(10deg) rotateY(-10deg) rotateZ(-2deg) translateY(-6px); }
+}
+
+/* Marca-texto (acento amarelo, sempre com texto escuro) */
+.total-value { background: var(--hl); color: var(--on-hl); padding: 0 8px; border-radius: 8px; align-self: flex-start; width: fit-content; }
+.is-selected .item-price .price { text-decoration: underline; text-decoration-color: var(--hl); text-decoration-thickness: 4px; text-underline-offset: 4px; text-decoration-skip-ink: none; }
+.person-tab[aria-pressed="true"] .person-total { background: var(--hl); color: var(--on-hl); border-radius: 4px; padding: 0 4px; width: fit-content; }
+.hint-done { background: var(--hl); color: var(--on-hl); border-radius: 999px; padding: 2px 10px; font-weight: 600; }
+.hint-done svg { color: var(--on-hl); }
+.scanline { background: var(--hl); box-shadow: 0 0 0 4px color-mix(in srgb, var(--hl) 30%, transparent), 0 0 24px var(--hl); }
+.share-total strong { background: var(--hl); color: var(--on-hl); border-radius: 6px; padding: 0 6px; }
+
+/* Moldura fina só enquanto vale o QR Code de um bar parceiro ("leitura cortesia do bar") */
+html.casa-ativa::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    border: 2px solid var(--hl);
+    pointer-events: none;
+    z-index: 1000;
+}
+@media (display-mode: standalone) { html.casa-ativa::after { border-radius: 40px; } }
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
