@@ -54,9 +54,12 @@ const Fmt = {
 };
 
 const Icons = {
-    logo: `<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-        <path d="M12.6 2a12 12 0 0 0 0 24z" fill="currentColor"/>
-        <path d="M15.4 2a12 12 0 0 1 0 24z" style="fill: var(--accent)"/>
+    // O mesmo desenho do ícone do app (assets/icons/icon.svg), em ladrilho
+    logo: `<svg class="logo" width="28" height="28" viewBox="0 0 512 512" aria-hidden="true">
+        <rect width="512" height="512" rx="128" fill="#15171C"/>
+        <circle cx="256" cy="150" r="50" fill="#3DD39A"/>
+        <rect x="116" y="230" width="280" height="52" rx="26" fill="#F4F4F1"/>
+        <circle cx="256" cy="362" r="50" fill="#FFC83C"/>
     </svg>`,
     camera: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
     gallery: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L5 21"/></svg>`,
@@ -78,6 +81,11 @@ const Icons = {
     history: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>`,
     trash: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>`,
     chevron: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`,
+    share: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m8 7 4-4 4 4"/><path d="M8 11H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-2"/></svg>`,
+    addSquare: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>`,
+    sun: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.3 17.7-1.4 1.4"/><path d="m19.1 4.9-1.4 1.4"/></svg>`,
+    moon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.1A8.5 8.5 0 1 1 9.9 3.5a6.6 6.6 0 0 0 10.6 10.6z"/></svg>`,
+    phone: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>`,
     more: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>`
 };
 
@@ -91,15 +99,20 @@ const Components = {
         return `<span class="avatar" style="width:${size}px;height:${size}px">${initial}</span>`;
     },
 
-    homeScreen(user, canLogin, casa, summary) {
+    homeScreen(user, canLogin, casa, summary, install) {
         return `
             <main class="screen home">
                 <div class="home-top">
                     <div class="brand">${Icons.logo}<span class="brand-name">divup</span></div>
-                    ${user
-                        ? `<button class="icon-btn" data-action="open-account" aria-label="Sua conta">${this.avatar(user)}</button>`
-                        : canLogin ? `<button class="btn-text" data-action="open-account">Entrar</button>` : ''}
+                    <div class="home-top-actions">
+                        ${this.themeButton()}
+                        ${user
+                            ? `<button class="icon-btn" data-action="open-account" aria-label="Sua conta">${this.avatar(user)}</button>`
+                            : canLogin ? `<button class="btn-text" data-action="open-account">Entrar</button>` : ''}
+                    </div>
                 </div>
+
+                ${install ? this.homeInstall(install) : ''}
 
                 ${summary ? this.homeSummary(summary) : `<div class="home-hero" aria-hidden="true">
                     <div class="mini-receipt">
@@ -483,6 +496,85 @@ const Components = {
                         ${p.canRemove ? `<button type="button" class="btn btn-secondary btn-danger" data-action="remove-person" data-index="${p.index}">Remover ${Fmt.esc(p.name)}</button>` : ''}
                     </div>
                 </form>
+            </div>
+        `;
+    },
+
+    // ========================
+    // Instalar o app
+    // ========================
+    /** Faixa no início: some quando a pessoa instala ou fecha. */
+    homeInstall(kind) {
+        return `
+            <div class="install-card" role="region" aria-label="Instalar o DivUp">
+                <span class="install-icon">${Icons.logo}</span>
+                <div class="install-text">
+                    <strong>Instale o DivUp</strong>
+                    <span>Abre direto da tela inicial.</span>
+                </div>
+                <button class="install-btn" data-action="install" ${kind === 'ios' ? 'aria-haspopup="dialog"' : ''}>Instalar</button>
+                <button class="icon-btn install-close" data-action="install-dismiss" aria-label="Agora não">${Icons.close}</button>
+            </div>
+        `;
+    },
+
+    /** iPhone: o Safari não deixa o site abrir a instalação; mostramos o caminho. */
+    installSheet() {
+        return `
+            <div class="sheet-scrim" data-action="close-sheet">
+                <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="installTitle">
+                    <div class="sheet-handle"></div>
+                    <div class="sheet-head">
+                        <h2 id="installTitle">Instalar no iPhone</h2>
+                        <button class="icon-btn" data-action="close-sheet" aria-label="Fechar">${Icons.close}</button>
+                    </div>
+                    <ol class="install-steps">
+                        <li><span class="install-n">1</span><span>Toque em <strong>Compartilhar</strong> <span class="install-glyph">${Icons.share}</span> na barra do navegador.</span></li>
+                        <li><span class="install-n">2</span><span>Role a lista e toque em <strong>Adicionar à Tela de Início</strong> <span class="install-glyph">${Icons.addSquare}</span>.</span></li>
+                        <li><span class="install-n">3</span><span>Toque em <strong>Adicionar</strong>. O DivUp aparece junto dos seus apps.</span></li>
+                    </ol>
+                    <button class="btn btn-secondary" data-action="install-dismiss">Entendi</button>
+                </section>
+            </div>
+        `;
+    },
+
+    // ========================
+    // Tema
+    // ========================
+    themeOptions: [
+        { id: 'auto', label: 'Automático', icon: 'phone' },
+        { id: 'light', label: 'Claro', icon: 'sun' },
+        { id: 'dark', label: 'Escuro', icon: 'moon' }
+    ],
+
+    /** Botão do topo: sol ou lua conforme o tema em uso; abre a folha. */
+    themeButton() {
+        const pref = window.DivupTheme?.get() || 'auto';
+        const opt = this.themeOptions.find(o => o.id === pref) || this.themeOptions[0];
+        const dark = document.documentElement.dataset.theme === 'dark';
+        return `<button class="icon-btn theme-btn" data-action="open-theme" aria-label="Tema: ${opt.label}">${dark ? Icons.moon : Icons.sun}</button>`;
+    },
+
+    themeSheet(pref) {
+        return `
+            <div class="sheet-scrim" data-action="close-sheet">
+                <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="themeTitle">
+                    <div class="sheet-handle"></div>
+                    <div class="sheet-head">
+                        <h2 id="themeTitle">Tema</h2>
+                        <button class="icon-btn" data-action="close-sheet" aria-label="Fechar">${Icons.close}</button>
+                    </div>
+                    <div class="theme-options" role="radiogroup" aria-labelledby="themeTitle">
+                        ${this.themeOptions.map(o => `
+                            <button class="theme-opt" role="radio" data-action="set-theme" data-pref="${o.id}" aria-checked="${pref === o.id}">
+                                ${Icons[o.icon]}<span>${o.label}</span>
+                            </button>`).join('')}
+                    </div>
+                    <p class="sheet-fine">${pref === 'auto'
+                        ? 'Segue o celular: fica escuro quando o celular estiver no modo escuro.'
+                        : 'Fica assim mesmo se o celular mudar de tema. Vale só neste aparelho.'}</p>
+                </section>
             </div>
         `;
     },

@@ -3,9 +3,8 @@
     --bg: #F4F4F1; --surface: #FFFFFF; --ink: #15171C; --muted: #5A5F69; --line: #E3E3DE; --accent: #0A7C5A;
     color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-    :root { --bg: #111214; --surface: #1B1D21; --ink: #F2F2EF; --muted: #A3A7AF; --line: #2C2F35; --accent: #3DD39A; color-scheme: dark; }
-}
+/* Escuro: aplicado por js/theme.js */
+:root[data-theme="dark"] { --bg: #111214; --surface: #1B1D21; --ink: #F2F2EF; --muted: #A3A7AF; --line: #2C2F35; --accent: #3DD39A; color-scheme: dark; }
 * { box-sizing: border-box; }
 body {
     margin: 0;

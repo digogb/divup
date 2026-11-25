@@ -13,6 +13,7 @@ const ME = 'Você';
 /** Nomes que querem dizer "eu" (quem está com o celular). */
 const isSelf = (name) => /^(voc[eê]|eu)$/i.test(String(name || '').trim());
 const CASA_HOURS = 6;      // quanto tempo vale o QR Code do bar depois de lido
+const INSTALL_KEY = 'divup.install'; // 'installed' | 'dismissed': o convite para instalar não volta
 const STORAGE = {
     get(key, fallback) {
         try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch { return fallback; }
@@ -40,8 +41,10 @@ const App = {
         authConfig: null,        // { google_client_id }
         account: { confirmDelete: false, error: '' },
         history: { loading: false, error: '', items: [], pendingDelete: null },
-        lastSaved: ''            // evita salvar de novo uma conta sem mudanças
+        lastSaved: '',           // evita salvar de novo uma conta sem mudanças
+        install: null            // null | 'prompt' (Android/Chrome) | 'ios': convite para instalar no início
     },
+    installPrompt: null,         // evento beforeinstallprompt guardado para o botão "Instalar"
 
     root: null,
 
@@ -54,11 +57,13 @@ const App = {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.state.sheet) this.closeSheet();
         });
+        window.addEventListener('divup-theme', () => this.onThemeChange());
         // Fechou ou trocou de app no meio da divisão: salva no histórico
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') this.saveToHistory({ keepalive: true });
         });
         this.captureCasa();
+        this.setupInstall();
         this.render();
         this.loadSession();
     },
@@ -84,6 +89,56 @@ const App = {
             .catch(() => { /* código inválido ou bar inativo: segue como leitura comum */ });
     },
 
+    /**
+     * Convite para instalar a PWA, no início, até a pessoa instalar ou fechar.
+     * Android/Chrome: guarda o beforeinstallprompt e abre a janela do próprio navegador.
+     * iPhone: o Safari não tem essa janela, então o botão mostra o passo a passo.
+     */
+    setupInstall() {
+        const standalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+        if (standalone || STORAGE.get(INSTALL_KEY)) return;
+        const showIfHome = () => { if (this.state.screen === 'home' && !this.state.sheet) this.render(); };
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); // no lugar da barrinha do Chrome, o convite do próprio app
+            if (STORAGE.get(INSTALL_KEY)) return;
+            this.installPrompt = e;
+            this.state.install = 'prompt';
+            showIfHome();
+        });
+        window.addEventListener('appinstalled', () => {
+            STORAGE.set(INSTALL_KEY, 'installed');
+            this.installPrompt = null;
+            this.state.install = null;
+            showIfHome();
+        });
+
+        const ua = navigator.userAgent;
+        const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const inApp = /FBAN|FBAV|Instagram|Line\//.test(ua); // navegador interno: não instala
+        if (ios && !inApp) this.state.install = 'ios';
+    },
+
+    async install() {
+        if (this.state.install === 'ios') { this.openSheet({ type: 'install' }); return; }
+        const prompt = this.installPrompt;
+        if (!prompt) return;
+        this.installPrompt = null;
+        try {
+            prompt.prompt();
+            const { outcome } = await prompt.userChoice;
+            STORAGE.set(INSTALL_KEY, outcome === 'accepted' ? 'installed' : 'dismissed');
+        } catch { /* o navegador recusou abrir a janela */ }
+        this.dismissInstall();
+    },
+
+    dismissInstall() {
+        if (!STORAGE.get(INSTALL_KEY)) STORAGE.set(INSTALL_KEY, 'dismissed');
+        this.state.install = null;
+        this.closeSheet();
+        if (this.state.screen === 'home') this.render();
+    },
+
     // =====================================================
     // Renderização
     // =====================================================
@@ -91,7 +146,7 @@ const App = {
         const s = this.state;
         let html = '';
         switch (s.screen) {
-            case 'home': html = Components.homeScreen(s.user, !!s.authConfig?.google_client_id, API.activeCasa(), this.homeSummaryView()); break;
+            case 'home': html = Components.homeScreen(s.user, !!s.authConfig?.google_client_id, API.activeCasa(), this.homeSummaryView(), s.install); break;
             case 'history': html = Components.historyScreen(this.historyView()); break;
             case 'loading': html = Components.loadingScreen(s.loading.photoUrl, s.loading.step); break;
             case 'receipt': html = Components.receiptScreen(this.receiptView()); break;
@@ -479,6 +534,10 @@ const App = {
 
             // Conta e histórico
             case 'open-account': this.openSheet({ type: 'account' }); break;
+            case 'install': this.install(); break;
+            case 'install-dismiss': this.dismissInstall(); break;
+            case 'open-theme': this.openSheet({ type: 'theme' }); break;
+            case 'set-theme': this.setTheme(el.dataset.pref); break;
             case 'open-history': this.openHistory(); break;
             case 'go-home': this.go('home'); break;
             case 'open-saved': this.openSaved(id); break;
@@ -951,7 +1010,27 @@ const App = {
         } else if (sheet.type === 'account') {
             root.innerHTML = Components.accountSheet(this.accountView());
             if (!this.state.user) this.renderGoogleButton();
+        } else if (sheet.type === 'install') {
+            root.innerHTML = Components.installSheet();
+            this.$('[data-action="install-dismiss"]')?.focus();
+        } else if (sheet.type === 'theme') {
+            root.innerHTML = Components.themeSheet(window.DivupTheme?.get() || 'auto');
+            // Trocar o tema não repete a animação de abertura
+            if (sheet.keep) root.querySelectorAll('.sheet-scrim, .sheet').forEach(el => { el.style.animation = 'none'; });
+            this.$(`[data-action="set-theme"][aria-checked="true"]`)?.focus();
         }
+    },
+
+    /** Aplica na hora; a folha fica aberta para ver o resultado. */
+    setTheme(pref) {
+        window.DivupTheme?.set(pref);  // dispara 'divup-theme' → onThemeChange
+    },
+
+    /** O tema mudou (escolha aqui, em outra aba ou no celular, em "Automático"). */
+    onThemeChange() {
+        const btn = this.$('.theme-btn');
+        if (btn) btn.outerHTML = Components.themeButton();
+        if (this.state.sheet?.type === 'theme') this.openSheet({ type: 'theme', keep: true });
     },
 
     closeSheet() {
@@ -1176,7 +1255,7 @@ const App = {
                 this.gisReady = true;
             }
             el.innerHTML = '';
-            const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+            const dark = document.documentElement.dataset.theme === 'dark';
             google.accounts.id.renderButton(el, {
                 type: 'standard',
                 theme: dark ? 'filled_black' : 'outline',

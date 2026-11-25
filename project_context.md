@@ -28,7 +28,9 @@ O fluxo principal consiste em:
 - `js/components.js`: funções que geram HTML. Todo texto vindo da nota passa por `Fmt.esc()`.
 - `js/api.js`: comprime a foto no navegador (1600px, JPEG 0.8) antes do upload.
 - Design "Recibo": base neutra, um único acento verde (`#0A7C5A` claro / `#3DD39A` escuro), Space Grotesk + Inter, números tabulares, tema claro/escuro pelo sistema.
-- Ícones em `pwa/assets/icons/` (fonte: `icon.svg`). Ao mudar arquivos da PWA, subir `CACHE_NAME` em `sw.js`.
+- Ícones em `pwa/assets/icons/` (fonte: `icon.svg`, sinal de dividir com ponto verde e ponto amarelo; os PNG são renderizados a partir dele). O mesmo desenho está em `Icons.logo` e nos ícones do app Android.
+- Tema: `js/theme.js` (carregado no `<head>` de todas as páginas) grava a escolha Automático/Claro/Escuro em `localStorage` (`divup.theme`) e põe `data-theme` no `<html>`; o CSS escuro fica em `:root[data-theme="dark"]`.
+- Convite para instalar: faixa no início (`homeInstall`) até a pessoa instalar ou fechar (`localStorage` `divup.install`). No Android/Chrome usa o `beforeinstallprompt`; no iPhone abre uma folha com o passo a passo. Não aparece com o app instalado nem no navegador do Instagram/Facebook. Ao mudar arquivos da PWA, subir `CACHE_NAME` em `sw.js`.
 
 ### Mobile Android (`/android`)
 - **Linguagem**: Kotlin
