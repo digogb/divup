@@ -17,7 +17,8 @@ class DeleteAccount(BaseModel):
 
 
 def _public(user: dict) -> dict:
-    return {"email": user["email"], "name": user["name"], "picture": user["picture"]}
+    return {"email": user["email"], "name": user["name"], "picture": user["picture"],
+            "is_admin": auth.is_admin(user)}
 
 
 @router.get("/config")

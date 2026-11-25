@@ -1,0 +1,140 @@
+/* ========================================
+   DivUp — Admin (celular). Usa os tokens do "Recibo" de styles.css.
+======================================== */
+
+.admin { height: 100%; display: flex; flex-direction: column; padding-top: var(--safe-top); }
+
+.admin-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px 4px;
+}
+.admin-tag {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 2px 8px;
+}
+
+.admin-body {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.admin-body h1 { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.admin-lead { color: var(--muted); font-size: 15px; }
+
+/* Seletor de mês */
+.admin-month { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.admin-month strong { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+.admin-month .icon-btn:disabled { opacity: 0.35; }
+.icon-flip { transform: rotate(180deg); }
+
+/* Cartões e números */
+.a-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.a-label { font-size: 13px; color: var(--muted); font-weight: 500; }
+.a-value { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.a-value small { font-family: var(--font); font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.a-note { font-size: 13px; color: var(--muted); }
+.a-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.a-grid .a-card { gap: 4px; }
+.a-grid .a-value { font-size: 22px; }
+
+.a-bar { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.a-bar span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.a-bar.is-warn span { background: var(--warn-ink); }
+
+/* Listas (bares, visitar) */
+.a-list { display: flex; flex-direction: column; gap: 8px; }
+.a-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 64px;
+    padding: 10px 12px 10px 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    text-align: left;
+}
+.a-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.a-row-title { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-row-meta { font-size: 13px; color: var(--muted); }
+.a-row > svg { color: var(--muted); }
+.a-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+    white-space: nowrap;
+}
+.a-empty { color: var(--muted); text-align: center; padding: 32px 8px; font-size: 15px; }
+.a-empty strong { display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px; }
+
+/* Folha do bar */
+.a-qr { align-self: center; width: min(280px, 100%); height: auto; border-radius: 16px; border: 1px solid var(--line); background: #FFFFFF; }
+.a-link { font-size: 13px; color: var(--muted); word-break: break-all; text-align: center; }
+.a-stats { display: flex; justify-content: space-around; text-align: center; }
+.a-stats .a-value { font-size: 22px; }
+.field-hint { font-size: 12px; color: var(--muted); }
+
+/* Navegação inferior: 4 áreas, mesmo lugar sempre */
+.admin-nav {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    padding-bottom: var(--safe-bottom);
+}
+.admin-nav button {
+    position: relative;
+    min-height: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+}
+.admin-nav button[aria-current="page"] { color: var(--accent); }
+.admin-nav button[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 24px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: var(--accent);
+}
+
+/* Telas sem acesso */
+.admin-gate { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 32px 24px; text-align: center; }
+.admin-gate h1 { font-family: var(--font-display); font-size: 24px; }
+.admin-gate p { color: var(--muted); max-width: 320px; }
+.admin-gate .btn { min-width: 220px; margin-top: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+    .admin *, .sheet, .sheet-scrim { animation: none !important; transition: none !important; }
+}

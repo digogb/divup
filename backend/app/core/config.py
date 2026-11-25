@@ -35,6 +35,8 @@ class Settings(BaseSettings):
 
     # E-mails (separados por vírgula) com acesso à área de admin
     ADMIN_EMAILS: str = ""
+    # Endereço público do app (vai no QR Code dos bares)
+    PUBLIC_URL: str = "https://divup.rglabs.tech"
 
     # Banco SQLite do histórico
     DATA_DIR: str = "/app/data"

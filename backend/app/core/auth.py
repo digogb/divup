@@ -93,6 +93,20 @@ def current_user(request: Request) -> dict:
     return user
 
 
+def is_admin(user: Optional[dict]) -> bool:
+    if not user:
+        return False
+    admins = {e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()}
+    return user.get("email", "").lower() in admins
+
+
+def current_admin(request: Request) -> dict:
+    user = current_user(request)
+    if not is_admin(user):
+        raise HTTPException(status_code=403, detail="Esta conta não tem acesso à área de admin.")
+    return user
+
+
 def verify_google_credential(credential: str) -> dict:
     """Valida o ID token do botão 'Entrar com Google' (assinatura, emissor, validade, aud)."""
     from google.oauth2 import id_token

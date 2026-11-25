@@ -42,7 +42,7 @@ async def cache_headers(request, call_next):
         response.headers["Cache-Control"] = "no-store"
     elif path.startswith("/assets/"):
         response.headers["Cache-Control"] = "public, max-age=604800"
-    elif path in ("/", "/index.html", "/sw.js", "/manifest.json", "/privacidade", "/termos") or path.startswith(("/js/", "/css/")):
+    elif path in ("/", "/index.html", "/sw.js", "/manifest.json", "/privacidade", "/termos", "/admin") or path.startswith(("/js/", "/css/")):
         response.headers["Cache-Control"] = "no-cache"
     return response
 
@@ -78,6 +78,11 @@ async def index_html():
 async def privacy_policy():
     """Política de Privacidade (link exigido pelo Google para o login)."""
     return FileResponse(os.path.join(PWA_DIR, "privacidade.html"), media_type="text/html")
+
+@app.get("/admin")
+async def admin_page():
+    """Área de admin (a API em /api/v1/admin exige login de um ADMIN_EMAILS)."""
+    return FileResponse(os.path.join(PWA_DIR, "admin.html"), media_type="text/html")
 
 @app.get("/termos")
 async def terms_of_use():

@@ -510,6 +510,7 @@ const Components = {
                 </div>
                 <div class="sheet-actions">
                     <button class="btn btn-primary" data-action="open-history">${Icons.history}Ver histórico</button>
+                    ${v.user.is_admin ? `<a class="btn btn-secondary" href="/admin">Área de admin</a>` : ''}
                     <button class="btn btn-secondary" data-action="logout">Sair</button>
                     <button class="btn-text btn-danger" data-action="delete-account">Excluir minha conta e dados</button>
                 </div>
