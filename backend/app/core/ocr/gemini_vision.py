@@ -167,7 +167,9 @@ class GeminiVisionExtractor:
         except json.JSONDecodeError as e:
             print(f"❌ Erro ao fazer parse do JSON retornado pelo Gemini:")
             print(response_text)
-            raise ValueError(f"Gemini retornou JSON inválido: {e}")
+            err = ValueError(f"Gemini retornou JSON inválido: {e}")
+            err.usage = usage  # a leitura falhou, mas foi cobrada
+            raise err
 
         items = [parse_item(item_data) for item_data in data.get("items", [])]
         items = [i for i in items if i is not None]

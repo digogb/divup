@@ -33,6 +33,13 @@ def _unb64(text: str) -> bytes:
     return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
 
 
+def keyed_hash(value: str) -> str:
+    """Hash com segredo (HMAC-SHA256) para guardar aparelho/IP sem o valor original."""
+    if not value:
+        return ""
+    return hmac.new(_SECRET, value.encode(), hashlib.sha256).hexdigest()[:32]
+
+
 def make_session(user_id: int) -> str:
     payload = _b64(json.dumps({"uid": user_id, "exp": int(time.time()) + settings.SESSION_DAYS * 86400}).encode())
     sig = _b64(hmac.new(_SECRET, payload.encode(), hashlib.sha256).digest())

@@ -34,6 +34,43 @@ CREATE TABLE IF NOT EXISTS receipts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_receipts_user_created ON receipts(user_id, created_at DESC);
+
+-- Bares parceiros (QR Code na mesa com ?casa=<slug>)
+CREATE TABLE IF NOT EXISTS casas (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug        TEXT NOT NULL UNIQUE,
+    name        TEXT NOT NULL,
+    active      INTEGER NOT NULL DEFAULT 1,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+-- Uma linha por leitura de nota (com ou sem sucesso): custo, limites e métricas.
+-- Aparelho e IP só como hash com segredo; o valor original nunca é gravado.
+CREATE TABLE IF NOT EXISTS reads (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    casa_id            INTEGER REFERENCES casas(id),
+    device_hash        TEXT NOT NULL DEFAULT '',
+    ip_hash            TEXT NOT NULL DEFAULT '',
+    establishment_name TEXT NOT NULL DEFAULT '',
+    model              TEXT NOT NULL DEFAULT '',
+    tokens_in          INTEGER NOT NULL DEFAULT 0,
+    tokens_out         INTEGER NOT NULL DEFAULT 0,
+    cost_brl           REAL NOT NULL DEFAULT 0,
+    success            INTEGER NOT NULL DEFAULT 0,
+    ms                 INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_reads_created ON reads(created_at);
+CREATE INDEX IF NOT EXISTS idx_reads_casa ON reads(casa_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_reads_device ON reads(device_hash, created_at);
+CREATE INDEX IF NOT EXISTS idx_reads_ip ON reads(ip_hash, created_at);
+
+-- Configurações editáveis no admin (ex.: limites)
+CREATE TABLE IF NOT EXISTS settings (
+    key    TEXT PRIMARY KEY,
+    value  TEXT NOT NULL
+);
 """
 
 

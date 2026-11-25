@@ -118,6 +118,9 @@ const API = {
         const formData = new FormData();
         formData.append('file', uploadFile);
         formData.append('client_info', JSON.stringify(info));
+        formData.append('device_id', this.deviceId());
+        const casa = this.activeCasa();
+        if (casa) formData.append('casa', casa.slug);
 
         let response;
         try {
@@ -148,6 +151,32 @@ const API = {
             throw new Error('Não encontrei itens nessa foto. Confira se a nota aparece inteira e legível.');
         }
         return receipt;
+    },
+
+    // =====================================================
+    // Aparelho e bar parceiro (cota grátis)
+    // =====================================================
+    /** Identificador aleatório deste aparelho, criado uma vez. Conta as leituras grátis. */
+    deviceId() {
+        try {
+            let id = localStorage.getItem('divup.deviceId');
+            if (!id) {
+                id = crypto.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+                localStorage.setItem('divup.deviceId', id);
+            }
+            return id;
+        } catch {
+            return '';
+        }
+    },
+
+    /** Bar parceiro lido do QR Code da mesa, enquanto válido: { slug, name, until }. */
+    activeCasa() {
+        try {
+            const casa = JSON.parse(localStorage.getItem('divup.casa') || 'null');
+            if (casa?.slug && casa.until > Date.now()) return casa;
+        } catch { /* valor inválido */ }
+        return null;
     },
 
     // =====================================================
