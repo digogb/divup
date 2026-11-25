@@ -41,6 +41,11 @@ MSG_PERSONAL = ("Você usou {qtd} deste mês. Nos bares com o QR do "
 MSG_HOURLY = "Muitas leituras seguidas. Espere alguns minutos e tente de novo."
 
 
+def _limit(reason: str, message: str) -> HTTPException:
+    """429 com o motivo em X-Limit (personal, budget, hard, hourly): a PWA escolhe o título."""
+    return HTTPException(status_code=429, detail=message, headers={"X-Limit": reason})
+
+
 # ---------------------------------------------------------------------------
 # Limites
 # ---------------------------------------------------------------------------
@@ -143,11 +148,11 @@ def check_allowed(casa: Optional[dict], device_hash: str, ip_hash: str) -> Optio
                 "SELECT COUNT(*) FROM reads WHERE ip_hash = ? AND created_at >= ?", (ip_hash, hour_ago)
             ).fetchone()[0]
             if last_hour >= lim["ip_reads_per_hour"]:
-                raise HTTPException(status_code=429, detail=MSG_HOURLY)
+                raise _limit("hourly", MSG_HOURLY)
 
         spent = month_spend(conn, start)
         if spent >= lim["hard_budget_brl"]:
-            raise HTTPException(status_code=429, detail=MSG_HARD)
+            raise _limit("hard", MSG_HARD)
 
         if casa:
             casa_reads = conn.execute(
@@ -159,7 +164,7 @@ def check_allowed(casa: Optional[dict], device_hash: str, ip_hash: str) -> Optio
             casa = None  # bar no limite: segue as regras de fora de parceiro
 
         if spent >= lim["monthly_budget_brl"]:
-            raise HTTPException(status_code=429, detail=MSG_BUDGET)
+            raise _limit("budget", MSG_BUDGET)
 
         free = lim["free_reads_per_month"]
         personal_msg = MSG_PERSONAL.format(
@@ -170,7 +175,7 @@ def check_allowed(casa: Optional[dict], device_hash: str, ip_hash: str) -> Optio
                 "AND success = 1 AND created_at >= ?", (device_hash, start),
             ).fetchone()[0]
             if used >= free:
-                raise HTTPException(status_code=429, detail=personal_msg)
+                raise _limit("personal", personal_msg)
         if ip_hash:
             used_ip = conn.execute(
                 "SELECT COUNT(*) FROM reads WHERE ip_hash = ? AND casa_id IS NULL "
@@ -179,7 +184,7 @@ def check_allowed(casa: Optional[dict], device_hash: str, ip_hash: str) -> Optio
             # Sem identificador de aparelho (ex.: app Android antigo), o IP vale como pessoa
             ip_cap = free * IP_MONTHLY_FACTOR if device_hash else free
             if used_ip >= ip_cap:
-                raise HTTPException(status_code=429, detail=personal_msg)
+                raise _limit("personal", personal_msg)
     return None
 
 

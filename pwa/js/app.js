@@ -30,6 +30,7 @@ const App = {
         editing: false,
         loading: { step: 0, photoUrl: null, controller: null },
         errorMessage: '',
+        errorLimit: null,        // motivo do limite (429) quando a leitura foi barrada
         // Quem vai pagar. Os itens (sel/split) sempre refletem a pessoa ativa;
         // as marcações das outras ficam guardadas em picks, por id do item.
         people: [{ name: ME, picks: {} }],
@@ -94,7 +95,7 @@ const App = {
             case 'history': html = Components.historyScreen(this.historyView()); break;
             case 'loading': html = Components.loadingScreen(s.loading.photoUrl, s.loading.step); break;
             case 'receipt': html = Components.receiptScreen(this.receiptView()); break;
-            case 'error': html = Components.errorScreen(s.errorMessage); break;
+            case 'error': html = Components.errorScreen(s.errorMessage, s.errorLimit); break;
         }
         this.root.innerHTML = html;
     },
@@ -536,6 +537,7 @@ const App = {
             if (error.name === 'AbortError' || controller.signal.aborted) return;
             console.error('Error processing receipt:', error);
             this.state.errorMessage = error.message || 'Tente fotografar de novo, com a nota inteira e bem iluminada.';
+            this.state.errorLimit = error.limit || null;
             this.go('error');
         } finally {
             if (photoUrl) URL.revokeObjectURL(photoUrl);

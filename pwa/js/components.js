@@ -578,13 +578,21 @@ const Components = {
     // ========================
     // Erro
     // ========================
-    errorScreen(message) {
+    errorScreen(message, limit) {
+        // Leitura barrada por limite do uso gratuito: tentar de novo não adianta
+        const LIMIT_TITLES = {
+            personal: 'Suas leituras grátis acabaram',
+            budget: 'As leituras grátis do mês acabaram',
+            hard: 'Leituras pausadas este mês',
+            hourly: 'Muitas leituras seguidas'
+        };
+        const title = limit ? (LIMIT_TITLES[limit] || 'Limite de leituras atingido') : 'Não deu para ler a nota';
         return `
             <main class="screen error">
                 <div class="error-icon">${Icons.alertLarge}</div>
-                <h1>Não deu para ler a nota</h1>
+                <h1>${title}</h1>
                 <p>${Fmt.esc(message)}</p>
-                <button class="btn btn-primary" data-action="retry">Tentar de novo</button>
+                <button class="btn btn-primary" data-action="retry">${limit ? 'Voltar ao início' : 'Tentar de novo'}</button>
             </main>
         `;
     }

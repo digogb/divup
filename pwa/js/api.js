@@ -137,7 +137,10 @@ const API = {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || `O servidor respondeu com erro (${response.status}).`);
+            const error = new Error(errorData.detail || `O servidor respondeu com erro (${response.status}).`);
+            // 429: limite do uso gratuito (personal, budget, hard ou hourly)
+            if (response.status === 429) error.limit = response.headers.get('X-Limit') || 'personal';
+            throw error;
         }
 
         const data = await response.json();

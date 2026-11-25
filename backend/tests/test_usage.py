@@ -17,10 +17,12 @@ def add_reads(n, *, casa=None, device="d1", ip="i1", cost=0.01, success=True):
                           establishment_name="Bar X", success=success, ms=1)
 
 
-def blocked(casa=None, device="d1", ip="i1"):
+def blocked(casa=None, device="d1", ip="i1", reason=None):
     with pytest.raises(HTTPException) as exc:
         usage.check_allowed(casa, device, ip)
     assert exc.value.status_code == 429
+    if reason:
+        assert exc.value.headers["X-Limit"] == reason
     return exc.value.detail
 
 
@@ -28,7 +30,7 @@ def test_personal_quota_by_device():
     add_reads(2)
     assert usage.check_allowed(None, "d1", "i1") is None
     add_reads(1)
-    assert "3 leituras grátis" in blocked()
+    assert "3 leituras grátis" in blocked(reason="personal")
     # outro aparelho no mesmo IP (CGNAT) continua podendo
     assert usage.check_allowed(None, "d2", "i1") is None
 
@@ -69,7 +71,7 @@ def test_monthly_budget_blocks_only_outside_partners():
     casa = add_casa()
     usage.save_limits({"monthly_budget_brl": 0.05})
     add_reads(5, casa=casa, device="x", ip="x")
-    assert "acabaram" in blocked(device="d5", ip="i5")
+    assert "acabaram" in blocked(device="d5", ip="i5", reason="budget")
     assert usage.check_allowed(casa, "d5", "i5") is not None
 
 
@@ -77,13 +79,13 @@ def test_hard_budget_blocks_everything():
     casa = add_casa()
     usage.save_limits({"monthly_budget_brl": 0.01, "hard_budget_brl": 0.05})
     add_reads(5, casa=casa, device="x", ip="x")
-    assert "limite de leituras deste mês" in blocked(casa=casa, device="d6", ip="i6")
+    assert "limite de leituras deste mês" in blocked(casa=casa, device="d6", ip="i6", reason="hard")
 
 
 def test_hourly_limit_per_ip():
     usage.save_limits({"ip_reads_per_hour": 3})
     add_reads(3, casa=None, device="a", ip="i7", success=False)
-    assert "Espere" in blocked(device="b", ip="i7")
+    assert "Espere" in blocked(device="b", ip="i7", reason="hourly")
 
 
 def test_limits_use_env_defaults_and_overrides():
