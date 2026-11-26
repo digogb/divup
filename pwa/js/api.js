@@ -182,6 +182,17 @@ const API = {
         return null;
     },
 
+    /**
+     * Evento anônimo para o painel de uso (abriu, enviou a parte, instalação).
+     * Nunca atrapalha o app: erros são ignorados.
+     */
+    track(name, detail = '', casa = null) {
+        const standalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+        this.request('POST', '/events', {
+            name, detail, casa, standalone, device_id: this.deviceId()
+        }, { keepalive: true }).catch(() => {});
+    },
+
     // =====================================================
     // Conta (login com Google) e histórico
     // =====================================================

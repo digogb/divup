@@ -34,7 +34,14 @@ def process_receipt(
 
     device_hash, ip_hash = usage_limits.client_hashes(request, device_id)
     # Levanta 429 se passou de algum limite; antes de gastar com a IA
-    partner = usage_limits.check_allowed(usage_limits.find_casa(casa), device_hash, ip_hash)
+    casa_row = usage_limits.find_casa(casa)
+    try:
+        partner = usage_limits.check_allowed(casa_row, device_hash, ip_hash)
+    except HTTPException as e:
+        if e.status_code == 429:  # o painel conta quem esbarrou no limite, e em qual
+            usage_limits.record_event("blocked", device_hash, casa_id=casa_row["id"] if casa_row else None,
+                                      detail=(e.headers or {}).get("X-Limit", ""))
+        raise
 
     start = time.time()
     usage, establishment, success = None, "", False

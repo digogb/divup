@@ -67,6 +67,20 @@ CREATE INDEX IF NOT EXISTS idx_reads_device ON reads(device_hash, created_at);
 CREATE INDEX IF NOT EXISTS idx_reads_ip ON reads(ip_hash, created_at);
 
 -- Configurações editáveis no admin (ex.: limites)
+-- Eventos anônimos do app para o painel de uso (abriu, enviou a parte, instalou, foi barrado).
+-- Mesmo hash de aparelho da tabela reads; nada que identifique a pessoa.
+CREATE TABLE IF NOT EXISTS events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    name        TEXT NOT NULL,
+    device_hash TEXT NOT NULL DEFAULT '',
+    casa_id     INTEGER REFERENCES casas(id),
+    standalone  INTEGER NOT NULL DEFAULT 0,
+    detail      TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_name_created ON events(name, created_at);
+
 CREATE TABLE IF NOT EXISTS settings (
     key    TEXT PRIMARY KEY,
     value  TEXT NOT NULL

@@ -5,6 +5,8 @@ import tempfile
 # Banco temporário e segredo fixo antes de importar o app
 os.environ["DATA_DIR"] = tempfile.mkdtemp(prefix="divup-test-")
 os.environ["SESSION_SECRET"] = "test-secret"
+# Os testes de cota usam 3 leituras grátis, independente do padrão de produção
+os.environ["FREE_READS_PER_MONTH"] = "3"
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest  # noqa: E402
@@ -16,6 +18,6 @@ from app.core.db import connect, init_db  # noqa: E402
 def fresh_db():
     init_db()
     with connect() as conn:
-        for table in ("reads", "casas", "settings"):
+        for table in ("events", "reads", "casas", "settings"):
             conn.execute(f"DELETE FROM {table}")
     yield

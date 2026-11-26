@@ -138,3 +138,43 @@
 @media (prefers-reduced-motion: reduce) {
     .admin *, .sheet, .sheet-scrim { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Painel de uso ---------- */
+.a-card .a-note strong { color: var(--ink); font-weight: 600; }
+.a-day { font-size: 14px; color: var(--ink-2); min-height: 2.8em; }
+.a-day strong { color: var(--ink); }
+
+/* Barras por dia: uma série, fim arredondado de 4px no topo, 2px entre barras */
+.a-chart { position: relative; display: flex; flex-direction: column; gap: 6px; padding-top: 18px; }
+.a-chart-max { position: absolute; top: 0; left: 0; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.a-cols {
+    height: 120px;
+    display: grid;
+    grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+    gap: 2px;
+    align-items: end;
+    border-top: 1px dashed var(--line);
+    border-bottom: 1px solid var(--line-strong);
+}
+.a-col { height: 100%; display: flex; align-items: flex-end; padding: 0; border-radius: 4px 4px 0 0; }
+.a-col span { display: block; width: 100%; border-radius: 4px 4px 0 0; background: color-mix(in srgb, var(--accent) 55%, var(--surface)); transition: background-color .15s ease; }
+.a-col.is-on span, .a-col:hover span { background: var(--accent); }
+.a-col:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.a-ticks { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.a-ticks span { white-space: nowrap; }
+
+/* Funil */
+.a-funnel { display: flex; flex-direction: column; gap: 12px; }
+.a-step { display: flex; flex-direction: column; gap: 6px; }
+.a-step-text { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.a-step-text strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.a-step-text small { font-size: 12px; font-weight: 500; color: var(--muted); }
+.a-track { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.a-track span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+
+/* Leituras por pessoa */
+.a-dist { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; align-items: end; }
+.a-dist-col { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.a-dist-col strong { font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.a-dist-bar { width: 100%; height: 80px; display: flex; align-items: flex-end; border-bottom: 1px solid var(--line-strong); }
+.a-dist-bar span { display: block; width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); }

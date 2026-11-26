@@ -40,6 +40,8 @@ const Admin = {
         loading: false,
         error: '',
         summary: null,
+        usage: null,            // painel de uso do mês (/admin/usage)
+        day: null,              // dia tocado no gráfico (AAAA-MM-DD)
         casas: null,
         leads: null,
         limits: null,
@@ -81,7 +83,13 @@ const Admin = {
         this.state.error = '';
         this.renderBody();
         try {
-            if (tab === 'summary') this.state.summary = await API.request('GET', `/admin/summary?mes=${month}`);
+            if (tab === 'summary') {
+                [this.state.summary, this.state.usage] = await Promise.all([
+                    API.request('GET', `/admin/summary?mes=${month}`),
+                    API.request('GET', `/admin/usage?mes=${month}`)
+                ]);
+                this.state.day = null;
+            }
             if (tab === 'casas') this.state.casas = (await API.request('GET', `/admin/casas?mes=${month}`)).casas;
             if (tab === 'leads') this.state.leads = (await API.request('GET', `/admin/leads?mes=${month}`)).leads;
             if (tab === 'limits') this.state.limits = await API.request('GET', '/admin/limits');
@@ -169,33 +177,149 @@ const Admin = {
 
     loadingView() { return `<p class="a-empty">Carregando…</p>`; },
 
-    // ---------- Resumo ----------
+    // ---------- Resumo: Portão 1, gasto e painel de uso ----------
     summaryView() {
         const d = this.state.summary;
-        if (!d || d.month !== this.state.month) return this.loadingView();
+        const u = this.state.usage;
+        if (!d || d.month !== this.state.month || !u || u.month !== this.state.month) return this.loadingView();
         const pct = d.budget_brl ? Math.min(100, (d.spent_brl / d.budget_brl) * 100) : 0;
         const returnPct = d.devices_prev_month ? Math.round((d.devices_returning / d.devices_prev_month) * 100) : null;
+        const activePct = Math.min(100, (d.devices / u.gate.active_target) * 100);
         return `
+            <section class="a-card" aria-label="Portão 1">
+                <span class="a-label">Portão 1 · pessoas que leram uma conta no mês</span>
+                <span class="a-value">${this.num(d.devices)} <small>de ${this.num(u.gate.active_target)}</small></span>
+                <div class="a-bar" role="progressbar" aria-valuenow="${Math.round(activePct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Meta de aparelhos ativos"><span style="width:${activePct}%"></span></div>
+                <span class="a-note">${returnPct === null
+                    ? 'Voltaram do mês anterior: sem dados ainda.'
+                    : `Voltaram do mês anterior: <strong>${returnPct}%</strong> (${d.devices_returning} de ${d.devices_prev_month}) · meta ${u.gate.return_target_pct}%`}</span>
+            </section>
+
             <section class="a-card" aria-label="Gasto com IA">
                 <span class="a-label">Gasto com IA</span>
                 <span class="a-value">${Fmt.brl(d.spent_brl)} <small>de ${Fmt.brl(d.budget_brl)}</small></span>
                 <div class="a-bar ${pct >= 80 ? 'is-warn' : ''}" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Uso do teto"><span style="width:${pct}%"></span></div>
-                <span class="a-note">${d.projected_brl !== null ? `Projeção do mês: ${Fmt.brl(d.projected_brl)} · ` : ''}teto rígido ${Fmt.brl(d.hard_budget_brl)}</span>
+                <span class="a-note">${d.projected_brl !== null ? `Projeção do mês: ${Fmt.brl(d.projected_brl)} · ` : ''}teto rígido ${Fmt.brl(d.hard_budget_brl)} · R$ ${d.avg_cost_brl.toFixed(4).replace('.', ',')} por leitura</span>
             </section>
+
+            ${this.dailyChart(u.daily)}
+
             <div class="a-grid">
                 ${this.kpi('Contas lidas', d.reads_ok)}
                 ${this.kpi('Em bares parceiros', d.reads_partner)}
                 ${this.kpi('Fora de parceiros', d.reads_outside)}
                 ${this.kpi('Leituras com falha', d.reads_failed)}
-                ${this.kpi('Aparelhos', d.devices, 'meta do Portão 1: 2.000')}
-                ${this.kpi('Voltaram', d.devices_returning, returnPct === null ? 'sem dados do mês anterior' : `${returnPct}% de ${d.devices_prev_month} · meta 30%`)}
             </div>
-            <p class="a-note">Custo médio por leitura: R$ ${d.avg_cost_brl.toFixed(4).replace('.', ',')} (${Fmt.brl(d.avg_cost_brl * 1000)} a cada mil).</p>
+
+            ${this.funnelView(u.funnel)}
+            ${this.qualityView(u)}
+            ${this.distributionView(u)}
+            ${this.originView(u)}
+        `;
+    },
+
+    num(n) { return Number(n || 0).toLocaleString('pt-BR'); },
+
+    /** Contas lidas por dia; tocar numa barra mostra o dia completo. */
+    dailyChart(days) {
+        const max = Math.max(1, ...days.map(x => x.reads_ok));
+        const withData = [...days].reverse().find(x => x.reads_ok || x.opens || x.blocked);
+        const sel = days.find(x => x.day === this.state.day) || withData || days[days.length - 1];
+        const label = (day) => `${day.slice(8)}/${day.slice(5, 7)}`;
+        const ticks = days.filter((_, i) => i % 7 === 0);
+        return `
+            <section class="a-card" aria-label="Dia a dia">
+                <span class="a-label">Contas lidas por dia</span>
+                <p class="a-day" aria-live="polite">${sel ? `<strong>${label(sel.day)}</strong> · ${this.plural(sel.reads_ok, 'conta lida', 'contas lidas')} · ${this.plural(sel.opens, 'pessoa abriu', 'pessoas abriram')} o app${sel.reads_failed ? ` · ${this.plural(sel.reads_failed, 'falha', 'falhas')}` : ''}${sel.blocked ? ` · ${this.plural(sel.blocked, 'barrada', 'barradas')} pelo limite` : ''}` : 'Sem dados no mês.'}</p>
+                <div class="a-chart">
+                    <span class="a-chart-max">${this.num(max)}</span>
+                    <div class="a-cols" style="--n:${days.length}">
+                        ${days.map(x => `<button class="a-col ${sel && x.day === sel.day ? 'is-on' : ''}" data-action="day" data-day="${x.day}"
+                            aria-label="${label(x.day)}: ${this.plural(x.reads_ok, 'conta lida', 'contas lidas')}" aria-pressed="${sel && x.day === sel.day}">
+                            <span style="height:${x.reads_ok ? Math.max(3, (x.reads_ok / max) * 100) : 0}%"></span></button>`).join('')}
+                    </div>
+                    <div class="a-ticks" style="--n:${days.length}">${ticks.map(x => `<span style="grid-column:${days.indexOf(x) + 1}">${Number(x.day.slice(8))}</span>`).join('')}</div>
+                </div>
+            </section>
+        `;
+    },
+
+    /** Do abrir o app até mandar a parte no grupo, em aparelhos no mês. */
+    funnelView(f) {
+        const steps = [
+            ['Abriram o app', f.opened],
+            ['Fotografaram uma conta', f.tried],
+            ['Tiveram a conta lida', f.read_ok],
+            ['Enviaram a parte', f.shared]
+        ];
+        const top = Math.max(1, f.opened, f.tried);
+        return `
+            <section class="a-card" aria-label="Funil do mês">
+                <span class="a-label">Do abrir ao enviar · pessoas no mês</span>
+                <div class="a-funnel">${steps.map(([name, n], i) => `
+                    <div class="a-step">
+                        <div class="a-step-text"><span>${name}</span><strong>${this.num(n)}${i && top ? ` <small>${Math.round((n / top) * 100)}%</small>` : ''}</strong></div>
+                        <div class="a-track"><span style="width:${(n / top) * 100}%"></span></div>
+                    </div>`).join('')}
+                </div>
+                <span class="a-note">Contado desde que o registro de eventos entrou no ar.</span>
+            </section>
+        `;
+    },
+
+    qualityView(u) {
+        const q = u.quality;
+        const reasons = { personal: 'cota pessoal', budget: 'teto do mês', hard: 'teto rígido', hourly: 'limite por hora' };
+        const blockedTotal = Object.values(u.blocked).reduce((a, b) => a + b, 0);
+        const shares = Object.values(u.shares).reduce((a, b) => a + b, 0);
+        const byChannel = { whatsapp: 0, copy: 0, native: 0 };
+        Object.entries(u.shares).forEach(([k, n]) => { const c = k.split('-')[0]; if (c in byChannel) byChannel[c] += n; });
+        const blockedNote = blockedTotal
+            ? Object.entries(u.blocked).map(([k, n]) => `${n} ${reasons[k] || k}`).join(' · ')
+            : 'ninguém esbarrou no limite';
+        return `
+            <div class="a-grid">
+                ${this.kpi('Leituras certas', q.success_pct === null ? '—' : `${q.success_pct}%`, `${this.num(q.ok)} de ${this.num(q.attempts)}`)}
+                ${this.kpi('Tempo típico', q.p50_s === null ? '—' : `${String(q.p50_s).replace('.', ',')} s`, q.p90_s === null ? '' : `9 em 10 em até ${String(q.p90_s).replace('.', ',')} s`)}
+                ${this.kpi('Barradas pelo limite', blockedTotal, blockedNote)}
+                ${this.kpi('Envios da parte', shares, `WhatsApp ${byChannel.whatsapp} · copiar ${byChannel.copy} · outros ${byChannel.native}`)}
+            </div>
+        `;
+    },
+
+    /** Quantas leituras cada aparelho fez: quem passa de 3 é quem pagaria por mais. */
+    distributionView(u) {
+        const max = Math.max(1, ...u.distribution.map(b => b.devices));
+        return `
+            <section class="a-card" aria-label="Leituras por pessoa">
+                <span class="a-label">Leituras por pessoa no mês</span>
+                <div class="a-dist">${u.distribution.map(b => `
+                    <div class="a-dist-col" aria-label="${b.label} leitura(s): ${this.plural(b.devices, 'pessoa', 'pessoas')}">
+                        <strong>${this.num(b.devices)}</strong>
+                        <div class="a-dist-bar"><span style="height:${b.devices ? Math.max(4, (b.devices / max) * 100) : 0}%"></span></div>
+                        <span>${b.label}</span>
+                    </div>`).join('')}
+                </div>
+                <span class="a-note"><strong>${this.plural(u.over_3, 'pessoa passou', 'pessoas passaram')} de 3 leituras.</strong> São as candidatas a um plano pago.</span>
+            </section>
+        `;
+    },
+
+    originView(u) {
+        const i = u.install;
+        const accepted = (i.accepted || 0) + (i.ios_ok || 0);
+        return `
+            <div class="a-grid">
+                ${this.kpi('Vieram do QR de um bar', u.opened_from_qr, 'pessoas que abriram pelo QR')}
+                ${this.kpi('Usam o app instalado', u.opened_installed, 'abriram pela tela inicial')}
+                ${this.kpi('Convite de instalar', i.shown || 0, `${accepted} aceitaram · ${(i.closed || 0) + (i.refused || 0)} recusaram`)}
+                ${this.kpi('Novas contas Google', u.accounts.new_users, `${this.num(u.accounts.users)} no total · ${this.plural(u.accounts.saved, 'conta salva', 'contas salvas')} no histórico`)}
+            </div>
         `;
     },
 
     kpi(label, value, note = '') {
-        return `<div class="a-card"><span class="a-label">${label}</span><span class="a-value">${Number(value).toLocaleString('pt-BR')}</span>${note ? `<span class="a-note">${note}</span>` : ''}</div>`;
+        return `<div class="a-card"><span class="a-label">${label}</span><span class="a-value">${typeof value === 'number' ? this.num(value) : value}</span>${note ? `<span class="a-note">${note}</span>` : ''}</div>`;
     },
 
     // ---------- Bares ----------
@@ -353,6 +477,7 @@ const Admin = {
                 break;
             }
             case 'reload': this.load(); break;
+            case 'day': this.state.day = el.dataset.day; this.renderBody(); break;
             case 'new-casa': this.openSheet({ type: 'new', name: el.dataset.name || '' }); break;
             case 'open-casa': this.openSheet({ type: 'casa', slug: el.dataset.slug }); break;
             case 'close-sheet': this.closeSheet(); break;

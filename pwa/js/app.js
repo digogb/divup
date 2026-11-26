@@ -62,6 +62,8 @@ const App = {
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') this.saveToHistory({ keepalive: true });
         });
+        // Abriu o app (com o código do bar, se veio do QR da mesa)
+        API.track('open', '', new URLSearchParams(location.search).get('casa'));
         this.captureCasa();
         this.setupInstall();
         this.render();
@@ -103,10 +105,12 @@ const App = {
             e.preventDefault(); // no lugar da barrinha do Chrome, o convite do próprio app
             if (STORAGE.get(INSTALL_KEY)) return;
             this.installPrompt = e;
+            if (this.state.install !== 'prompt') API.track('install', 'shown');
             this.state.install = 'prompt';
             showIfHome();
         });
         window.addEventListener('appinstalled', () => {
+            API.track('install', 'installed');
             STORAGE.set(INSTALL_KEY, 'installed');
             this.installPrompt = null;
             this.state.install = null;
@@ -116,24 +120,35 @@ const App = {
         const ua = navigator.userAgent;
         const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         const inApp = /FBAN|FBAV|Instagram|Line\//.test(ua); // navegador interno: não instala
-        if (ios && !inApp) this.state.install = 'ios';
+        if (ios && !inApp) {
+            this.state.install = 'ios';
+            API.track('install', 'shown');
+        }
     },
 
     async install() {
-        if (this.state.install === 'ios') { this.openSheet({ type: 'install' }); return; }
+        if (this.state.install === 'ios') {
+            API.track('install', 'ios_steps');
+            this.openSheet({ type: 'install' });
+            return;
+        }
         const prompt = this.installPrompt;
         if (!prompt) return;
         this.installPrompt = null;
         try {
             prompt.prompt();
             const { outcome } = await prompt.userChoice;
+            API.track('install', outcome === 'accepted' ? 'accepted' : 'refused');
             STORAGE.set(INSTALL_KEY, outcome === 'accepted' ? 'installed' : 'dismissed');
         } catch { /* o navegador recusou abrir a janela */ }
         this.dismissInstall();
     },
 
     dismissInstall() {
-        if (!STORAGE.get(INSTALL_KEY)) STORAGE.set(INSTALL_KEY, 'dismissed');
+        if (!STORAGE.get(INSTALL_KEY)) {
+            API.track('install', this.state.sheet?.type === 'install' ? 'ios_ok' : 'closed');
+            STORAGE.set(INSTALL_KEY, 'dismissed');
+        }
         this.state.install = null;
         this.closeSheet();
         if (this.state.screen === 'home') this.render();
@@ -1162,11 +1177,13 @@ const App = {
     },
 
     shareWhatsApp() {
+        API.track('share', `whatsapp-${this.shareMode()}`);
         const url = `https://wa.me/?text=${encodeURIComponent(this.shareText())}`;
         window.open(url, '_blank', 'noopener');
     },
 
     async shareCopy() {
+        API.track('share', `copy-${this.shareMode()}`);
         const text = this.shareText();
         try {
             await navigator.clipboard.writeText(text);
@@ -1187,6 +1204,7 @@ const App = {
     async shareNative() {
         try {
             await navigator.share({ title: this.shareMode() === 'all' ? 'Divisão da conta' : this.partLabel(), text: this.shareText() });
+            API.track('share', `native-${this.shareMode()}`);
         } catch (err) {
             if (err.name !== 'AbortError') this.toast('Não foi possível compartilhar');
         }

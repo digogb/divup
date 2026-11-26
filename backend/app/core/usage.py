@@ -202,3 +202,15 @@ def record_read(*, casa: Optional[dict], device_hash: str, ip_hash: str, usage: 
              usage.get("cost_brl", 0.0), 1 if success else 0, ms),
         )
         return month_spend(conn, month_range()[0])
+
+
+# ---------------------------------------------------------------------------
+# Eventos do painel de uso
+# ---------------------------------------------------------------------------
+def record_event(name: str, device_hash: str = "", *, casa_id: Optional[int] = None,
+                 standalone: bool = False, detail: str = "") -> None:
+    with connect() as conn:
+        conn.execute(
+            "INSERT INTO events (name, device_hash, casa_id, standalone, detail) VALUES (?, ?, ?, ?, ?)",
+            (name, device_hash, casa_id, 1 if standalone else 0, (detail or "")[:40]),
+        )

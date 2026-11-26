@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # Limites do uso gratuito (padrões; o admin pode mudar sem novo deploy)
     MONTHLY_BUDGET_BRL: float = 100.0   # atingido: só leituras em bares parceiros
     HARD_BUDGET_BRL: float = 150.0      # atingido: nenhuma leitura
-    FREE_READS_PER_MONTH: int = 3       # por aparelho, fora de bar parceiro
+    FREE_READS_PER_MONTH: int = 30      # por aparelho, fora de bar parceiro (uso livre no início)
     CASA_READS_PER_MONTH: int = 1500    # por bar parceiro
     IP_READS_PER_HOUR: int = 20         # anti-abuso, qualquer origem
 

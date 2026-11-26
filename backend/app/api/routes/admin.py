@@ -101,6 +101,117 @@ def summary(mes: Optional[str] = MONTH):
 
 
 # ---------------------------------------------------------------------------
+# Painel de uso: dia a dia, funil, qualidade da leitura, instalação
+# ---------------------------------------------------------------------------
+GATE_ACTIVE = 2000      # Portão 1 do plano de negócio: aparelhos ativos no mês
+GATE_RETURN_PCT = 30    # e % que voltam no mês seguinte
+DAY_BRT = "date(created_at, '-3 hours')"  # created_at é UTC; o dia conta em Brasília
+
+
+def _days(mes: str) -> list[str]:
+    """Dias do mês (AAAA-MM-DD) até hoje, se for o mês atual."""
+    year, mon = map(int, mes.split("-"))
+    first = datetime(year, mon, 1)
+    nxt = datetime(year + (mon == 12), mon % 12 + 1, 1)
+    last = (nxt - first).days
+    if mes == usage.current_month():
+        last = datetime.now(usage.BRT).day
+    return [f"{mes}-{d:02d}" for d in range(1, last + 1)]
+
+
+def _distinct(conn, sql: str, args: tuple) -> int:
+    return conn.execute(f"SELECT COUNT(DISTINCT device_hash) FROM ({sql}) WHERE device_hash != ''", args).fetchone()[0]
+
+
+@router.get("/usage")
+def usage_panel(mes: Optional[str] = MONTH):
+    mes, start, end = _month(mes)
+    rng = (start, end)
+    with connect() as conn:
+        # Dia a dia
+        daily = {d: {"day": d, "opens": 0, "reads_ok": 0, "reads_failed": 0, "blocked": 0, "devices": 0} for d in _days(mes)}
+        for r in conn.execute(
+            f"""SELECT {DAY_BRT} AS d, COUNT(DISTINCT CASE WHEN device_hash != '' THEN device_hash END) AS n
+                FROM events WHERE name = 'open' AND created_at >= ? AND created_at < ? GROUP BY d""", rng):
+            if r["d"] in daily: daily[r["d"]]["opens"] = r["n"]
+        for r in conn.execute(
+            f"""SELECT {DAY_BRT} AS d, SUM(success) AS ok, COUNT(*) - SUM(success) AS failed,
+                       COUNT(DISTINCT CASE WHEN success = 1 AND device_hash != '' THEN device_hash END) AS devices
+                FROM reads WHERE created_at >= ? AND created_at < ? GROUP BY d""", rng):
+            if r["d"] in daily: daily[r["d"]].update(reads_ok=r["ok"], reads_failed=r["failed"], devices=r["devices"])
+        for r in conn.execute(
+            f"""SELECT {DAY_BRT} AS d, COUNT(*) AS n FROM events
+                WHERE name = 'blocked' AND created_at >= ? AND created_at < ? GROUP BY d""", rng):
+            if r["d"] in daily: daily[r["d"]]["blocked"] = r["n"]
+
+        # Funil do mês, em aparelhos
+        ev = "SELECT device_hash FROM events WHERE name = ? AND created_at >= ? AND created_at < ?"
+        funnel = {
+            "opened": _distinct(conn, ev, ("open", *rng)),
+            "tried": _distinct(conn, f"""SELECT device_hash FROM reads WHERE created_at >= ? AND created_at < ?
+                                         UNION ALL {ev}""", (*rng, "blocked", *rng)),
+            "read_ok": _distinct(conn, "SELECT device_hash FROM reads WHERE success = 1 AND created_at >= ? AND created_at < ?", rng),
+            "shared": _distinct(conn, ev, ("share", *rng)),
+        }
+
+        # Qualidade da leitura
+        times = sorted(r[0] for r in conn.execute(
+            "SELECT ms FROM reads WHERE success = 1 AND ms > 0 AND created_at >= ? AND created_at < ?", rng))
+        attempts, ok = conn.execute(
+            "SELECT COUNT(*), COALESCE(SUM(success), 0) FROM reads WHERE created_at >= ? AND created_at < ?", rng).fetchone()
+
+        def pct(p):
+            return round(times[min(len(times) - 1, int(p * len(times)))] / 1000, 1) if times else None
+
+        # Quantas leituras cada aparelho fez no mês (sinal de quem pagaria por mais)
+        per_device = [r[0] for r in conn.execute(
+            """SELECT COUNT(*) FROM reads WHERE success = 1 AND device_hash != '' AND created_at >= ? AND created_at < ?
+               GROUP BY device_hash""", rng)]
+        buckets = [("1", 1, 1), ("2", 2, 2), ("3", 3, 3), ("4–10", 4, 10), ("11+", 11, 10**9)]
+        distribution = [{"label": b, "devices": sum(lo <= n <= hi for n in per_device)} for b, lo, hi in buckets]
+
+        blocked = {r["detail"] or "?": r["n"] for r in conn.execute(
+            """SELECT detail, COUNT(*) AS n FROM events WHERE name = 'blocked' AND created_at >= ? AND created_at < ?
+               GROUP BY detail""", rng)}
+        shares = {r["detail"] or "?": r["n"] for r in conn.execute(
+            """SELECT detail, COUNT(*) AS n FROM events WHERE name = 'share' AND created_at >= ? AND created_at < ?
+               GROUP BY detail""", rng)}
+        install = {r["detail"] or "?": r["n"] for r in conn.execute(
+            """SELECT detail, COUNT(DISTINCT device_hash) AS n FROM events
+               WHERE name = 'install' AND created_at >= ? AND created_at < ? GROUP BY detail""", rng)}
+        origin = conn.execute(
+            """SELECT COUNT(DISTINCT CASE WHEN casa_id IS NOT NULL THEN device_hash END) AS qr,
+                      COUNT(DISTINCT CASE WHEN standalone = 1 THEN device_hash END) AS installed
+               FROM events WHERE name = 'open' AND device_hash != '' AND created_at >= ? AND created_at < ?""", rng).fetchone()
+        accounts = conn.execute(
+            """SELECT (SELECT COUNT(*) FROM users WHERE created_at >= ? AND created_at < ?) AS new_users,
+                      (SELECT COUNT(*) FROM users) AS users,
+                      (SELECT COUNT(*) FROM receipts WHERE created_at >= ? AND created_at < ?) AS saved,
+                      (SELECT COUNT(DISTINCT user_id) FROM receipts WHERE created_at >= ? AND created_at < ?) AS savers""",
+            (*rng, *rng, *rng)).fetchone()
+
+    return {
+        "month": mes,
+        "gate": {"active_target": GATE_ACTIVE, "return_target_pct": GATE_RETURN_PCT},
+        "daily": list(daily.values()),
+        "funnel": funnel,
+        "quality": {
+            "attempts": attempts, "ok": ok,
+            "success_pct": round(100 * ok / attempts) if attempts else None,
+            "p50_s": pct(0.5), "p90_s": pct(0.9),
+        },
+        "distribution": distribution,
+        "over_3": sum(n > 3 for n in per_device),
+        "blocked": blocked,
+        "shares": shares,
+        "install": install,
+        "opened_from_qr": origin["qr"],
+        "opened_installed": origin["installed"],
+        "accounts": dict(accounts),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Bares parceiros
 # ---------------------------------------------------------------------------
 class NewCasa(BaseModel):

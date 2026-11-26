@@ -53,9 +53,10 @@ O fluxo principal consiste em:
 ### Backend (`backend/app`)
 - `main.py`: Entrypoint da API.
 - `api/routes/receipt.py`: Endpoint `POST /api/v1/receipt/process` que recebe a imagem (rota síncrona `def`, roda em threadpool), mais `device_id` e `casa` (bar parceiro). Verifica os limites antes da IA e registra a leitura depois.
-- `core/usage.py`: limites do uso gratuito e registro de leituras (tabela `reads`). Regras: teto do mês (R$ 100) só deixa bar parceiro ler; teto rígido (R$ 150) bloqueia tudo; fora de parceiro, 3 leituras/mês por aparelho (IP com teto 10× por causa do CGNAT); 20 tentativas/hora por IP. Valores na tabela `settings`, com padrão no `.env`.
+- `core/usage.py`: limites do uso gratuito e registro de leituras (tabela `reads`). Regras: teto do mês (R$ 100) só deixa bar parceiro ler; teto rígido (R$ 150) bloqueia tudo; fora de parceiro, 30 leituras/mês por aparelho (uso livre no início; era 3) (IP com teto 10× por causa do CGNAT); 20 tentativas/hora por IP. Valores na tabela `settings`, com padrão no `.env`.
 - `api/routes/casa.py`: `GET /api/v1/casa/{slug}` confirma o bar do QR Code.
-- `api/routes/admin.py`: API da área de admin (`/api/v1/admin/*`: resumo, bares, QR Code em PNG, lugares para visitar, limites). Exige e-mail em `ADMIN_EMAILS`.
+- `api/routes/admin.py`: API da área de admin (`/api/v1/admin/*`: resumo, painel de uso `/usage`, bares, QR Code em PNG, lugares para visitar, limites). Exige e-mail em `ADMIN_EMAILS`.
+- `api/routes/events.py`: `POST /api/v1/events` sem login, para o painel de uso. Aceita só `open`, `share` e `install` (teto de 300 por IP/hora, em memória). Leituras barradas pelo limite viram evento `blocked` no próprio `receipt.py`. Tabela `events`, com o mesmo hash de aparelho de `reads`.
 - `core/pricing.py`: custo estimado de cada leitura a partir dos tokens.
 - `core/ocr/gemini_vision.py`: **Core Logic**. Contém o prompt enviado ao Gemini para extração JSON (Itens, Data, Local).
 - `api/routes/auth.py` / `history.py`: login com Google (ID token verificado no servidor, sessão em cookie assinado) e histórico pessoal (CRUD).
@@ -102,6 +103,6 @@ Necessárias no `.env` da raiz ou backend:
 
 ## 7. Bares parceiros e área de admin
 - QR Code na mesa → `https://divup.rglabs.tech/?casa=<slug>`. A PWA (`captureCasa` em `js/app.js`) guarda o bar por 6 horas em `localStorage` (`divup.casa`) e limpa a URL na hora, para que um link salvo não leve o código a outro bar. Enquanto o bar está ativo, a home mostra "Cortesia de <bar>".
-- `/admin` (`pwa/admin.html`, `js/admin.js`, `css/admin.css`): página para celular com Resumo, Bares (cadastro, QR Code, enviar ao dono), Visitar (lugares lidos fora dos parceiros) e Limites. Fica fora do cache do service worker. O link aparece na folha "Conta" para quem é admin.
+- `/admin` (`pwa/admin.html`, `js/admin.js`, `css/admin.css`): página para celular com Resumo (Portão 1, gasto, contas por dia, funil abrir → ler → enviar, qualidade da leitura, leituras por pessoa, instalação), Bares (cadastro, QR Code, enviar ao dono), Visitar (lugares lidos fora dos parceiros) e Limites. Fica fora do cache do service worker. O link aparece na folha "Conta" para quem é admin.
 - O cartão do QR Code é gerado no servidor com `qrcode` + Pillow, com a fonte DejaVu (`fonts-dejavu-core` no Dockerfile).
 - Testes: `docker compose run --rm --no-deps -v "$PWD/backend/tests:/app/tests:ro" api sh -c "pip install -q pytest && python -m pytest -q tests"`.
