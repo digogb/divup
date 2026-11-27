@@ -1385,6 +1385,8 @@ const App = {
             this.toast(`Olá, ${(user.name || user.email).split(' ')[0]}!`);
             if (this.state.screen === 'home') this.render();
             if (this.state.screen === 'receipt') this.saveToHistory();
+            // Traz o histórico: a tela inicial troca a notinha pelo resumo do mês
+            this.refreshHomeSummary();
         } catch (error) {
             this.setAccount({ error: error.message });
         }

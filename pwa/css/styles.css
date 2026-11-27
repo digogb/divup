@@ -245,11 +245,21 @@ a.btn, a.btn-text { text-decoration: none; }
 .home-copy h1 { font-family: var(--font-display); font-weight: 700; font-size: 32px; line-height: 1.08; letter-spacing: -0.025em; }
 .home-copy p { margin-top: 10px; font-size: 16px; line-height: 1.5; color: var(--muted); }
 .home-actions { display: flex; flex-direction: column; gap: 10px; }
+.home-photo { display: flex; flex-direction: column; gap: 10px; }
 /* Tela baixa: título e espaços menores para caber resumo ou notinha */
 @media (max-height: 700px) {
     .home { gap: 20px; padding-top: calc(var(--safe-top) + 24px); }
     .home-copy h1 { font-size: 28px; }
     .home-copy p { font-size: 15px; }
+}
+/* Celular com a barra do navegador: a notinha precisa do espaço.
+   Some o parágrafo (a animação explica) e a galeria vira um botão só de ícone ao lado da câmera. */
+@media (max-height: 820px) {
+    .home-copy p:not(.home-casa) { display: none; }
+    .home-photo { flex-direction: row; }
+    .home-photo .btn-primary { flex: 1; min-width: 0; }
+    .home-gallery { flex: none; width: 56px; padding: 0; }
+    .home-gallery-label { display: none; }
 }
 
 /* Bar parceiro (QR Code da mesa) */

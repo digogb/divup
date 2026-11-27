@@ -136,8 +136,10 @@ const Components = {
                 <div class="home-actions">
                     <input type="file" id="cameraInput" class="file-input" accept="image/*" capture="environment">
                     <input type="file" id="galleryInput" class="file-input" accept="image/*">
-                    <button class="btn btn-primary" data-action="camera">${Icons.camera}Fotografar conta</button>
-                    <button class="btn btn-secondary" data-action="gallery">${Icons.gallery}Escolher da galeria</button>
+                    <div class="home-photo">
+                        <button class="btn btn-primary" data-action="camera">${Icons.camera}Fotografar conta</button>
+                        <button class="btn btn-secondary home-gallery" data-action="gallery" aria-label="Escolher da galeria" title="Escolher da galeria">${Icons.gallery}<span class="home-gallery-label">Escolher da galeria</span></button>
+                    </div>
                     ${user && !summary ? `<button class="btn-text home-history" data-action="open-history">${Icons.history}Ver histórico</button>` : ''}
                     <button class="btn-text home-invite" data-action="invite">${Icons.share}Indicar a um amigo</button>
                 </div>
