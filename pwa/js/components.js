@@ -138,6 +138,7 @@ const Components = {
                     <button class="btn btn-primary" data-action="camera">${Icons.camera}Fotografar conta</button>
                     <button class="btn btn-secondary" data-action="gallery">${Icons.gallery}Escolher da galeria</button>
                     ${user && !summary ? `<button class="btn-text home-history" data-action="open-history">${Icons.history}Ver histórico</button>` : ''}
+                    ${!summary ? `<button class="btn-text home-demo" data-action="demo">${Icons.checkCircle}Testar com uma conta de exemplo</button>` : ''}
                     <button class="btn-text home-invite" data-action="invite">${Icons.share}Indicar a um amigo</button>
                 </div>
             </main>
@@ -206,7 +207,7 @@ const Components = {
     // ========================
     // Divisão
     // ========================
-    receiptScreen(view) {
+    receiptScreen(view, demo = false) {
         return `
             <main class="screen receipt">
                 <header class="receipt-top">
@@ -217,6 +218,8 @@ const Components = {
                     </div>
                     <button class="btn-text" data-action="toggle-edit" id="btnEdit">${view.editing ? 'Concluir' : 'Editar'}</button>
                 </header>
+
+                ${demo ? `<p class="demo-note">Conta de exemplo: toque no que seria seu e veja sua parte.</p>` : ''}
 
                 <div id="peopleBar">${this.peopleBar(view.people)}</div>
 
@@ -515,6 +518,26 @@ const Components = {
                 </div>
                 <button class="install-btn" data-action="install" ${kind === 'ios' ? 'aria-haspopup="dialog"' : ''}>Instalar</button>
                 <button class="icon-btn install-close" data-action="install-dismiss" aria-label="Agora não">${Icons.close}</button>
+            </div>
+        `;
+    },
+
+    /** Fim da conta de exemplo: a próxima é de verdade. Com convite para instalar, se ainda couber. */
+    demoDoneSheet(install) {
+        return `
+            <div class="sheet-scrim" data-action="close-sheet">
+                <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="demoTitle">
+                    <div class="sheet-handle"></div>
+                    <div class="sheet-head">
+                        <h2 id="demoTitle">Pronto, é assim</h2>
+                        <button class="icon-btn" data-action="close-sheet" aria-label="Fechar">${Icons.close}</button>
+                    </div>
+                    <p class="sheet-text">Na próxima conta, é só fotografar a nota.${install ? ' Instale o DivUp para tê-lo à mão na hora.' : ''}</p>
+                    <div class="sheet-actions">
+                        ${install ? `<button class="btn btn-primary" data-action="install" ${install === 'ios' ? 'aria-haspopup="dialog"' : ''}>Instalar o DivUp</button>` : ''}
+                        <button class="btn btn-secondary" data-action="close-sheet">${install ? 'Agora não' : 'Entendi'}</button>
+                    </div>
+                </section>
             </div>
         `;
     },

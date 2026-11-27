@@ -14,6 +14,22 @@ const ME = 'Você';
 const isSelf = (name) => /^(voc[eê]|eu)$/i.test(String(name || '').trim());
 const CASA_HOURS = 6;      // quanto tempo vale o QR Code do bar depois de lido
 const SHARE_URL = 'https://divup.rglabs.tech/?utm_source=conta';  // link no fim do texto enviado
+// Conta de exemplo: quem chega sem uma conta na mão experimenta a divisão (sem gastar leitura de IA)
+const DEMO_RECEIPT = {
+    id: 'exemplo',
+    establishment_name: 'Conta de exemplo',
+    items: [
+        { name: 'Chopp 300ml', quantity: 6, unit_price: 9.9, total_price: 59.4 },
+        { name: 'Caipirinha de limão', quantity: 2, unit_price: 18, total_price: 36 },
+        { name: 'Isca de peixe', quantity: 1, unit_price: 54.9, total_price: 54.9 },
+        { name: 'Batata frita com cheddar', quantity: 1, unit_price: 39.9, total_price: 39.9 },
+        { name: 'Caldinho de feijão', quantity: 3, unit_price: 8, total_price: 24 },
+        { name: 'Água com gás', quantity: 2, unit_price: 5, total_price: 10 },
+        { name: 'Refrigerante lata', quantity: 1, unit_price: 6.5, total_price: 6.5 }
+    ],
+    subtotal: 230.7,
+    total: 230.7
+};
 const INVITE_URL = 'https://divup.rglabs.tech/?utm_source=indicacao';  // botão "Indicar a um amigo"
 const INSTALL_KEY = 'divup.install'; // 'installed' | 'dismissed': o convite para instalar não volta
 const STORAGE = {
@@ -183,7 +199,7 @@ const App = {
             case 'home': html = Components.homeScreen(s.user, !!s.authConfig?.google_client_id, API.activeCasa(), this.homeSummaryView(), s.install); break;
             case 'history': html = Components.historyScreen(this.historyView()); break;
             case 'loading': html = Components.loadingScreen(s.loading.photoUrl, s.loading.step); break;
-            case 'receipt': html = Components.receiptScreen(this.receiptView()); break;
+            case 'receipt': html = Components.receiptScreen(this.receiptView(), this.state.demo); break;
             case 'error': html = Components.errorScreen(s.errorMessage, s.errorLimit); break;
         }
         this.root.innerHTML = html;
@@ -574,6 +590,7 @@ const App = {
             case 'set-theme': this.setTheme(el.dataset.pref); break;
             case 'open-history': this.openHistory(); break;
             case 'invite': this.invite(); break;
+            case 'demo': this.startDemo(); break;
             case 'go-home': this.go('home'); break;
             case 'open-saved': this.openSaved(id); break;
             case 'delete-saved': this.deleteSaved(id); break;
@@ -647,6 +664,7 @@ const App = {
             if (controller.signal.aborted) return;
 
             this.state.receipt = receipt;
+            this.state.demo = false;
             this.resetPeople();
             this.state.editing = false;
             this.state.tip = { mode: 'preset', preset: 10, custom: this.state.tip.custom };
@@ -685,7 +703,31 @@ const App = {
         this.go('home');
     },
 
+    /** Abre a conta de exemplo, pelo mesmo caminho de uma nota lida. */
+    startDemo() {
+        API.track('demo', 'start');
+        this.state.receipt = API.transformReceiptData(DEMO_RECEIPT);
+        this.state.demo = true;
+        this.resetPeople();
+        this.state.editing = false;
+        this.state.tip = { mode: 'preset', preset: 10, custom: this.state.tip.custom };
+        this.go('receipt');
+    },
+
+    /** Saiu da conta de exemplo: quem marcou algo vê o convite para a próxima conta de verdade. */
+    endDemo() {
+        const marked = this.state.people.some((_, i) => this.totals(i).any);
+        API.track('demo', marked ? 'done' : 'left');
+        this.state.demo = false;
+        this.state.receipt = null;
+        this.resetPeople();
+        this.state.editing = false;
+        this.go('home');
+        if (marked) this.openSheet({ type: 'demo-done' });
+    },
+
     newReceipt() {
+        if (this.state.demo) return this.endDemo();
         // A conta recém-salva entra no resumo da tela inicial
         this.saveToHistory().finally(() => this.refreshHomeSummary());
         this.state.receipt = null;
@@ -1045,6 +1087,9 @@ const App = {
         } else if (sheet.type === 'account') {
             root.innerHTML = Components.accountSheet(this.accountView());
             if (!this.state.user) this.renderGoogleButton();
+        } else if (sheet.type === 'demo-done') {
+            root.innerHTML = Components.demoDoneSheet(this.state.install);
+            this.$('.sheet .btn')?.focus();
         } else if (sheet.type === 'install') {
             root.innerHTML = Components.installSheet();
             this.$('[data-action="install-dismiss"]')?.focus();
@@ -1414,7 +1459,7 @@ const App = {
     /** Salva a conta atual se houver login e algo marcado. Silencioso em caso de erro. */
     async saveToHistory({ keepalive = false } = {}) {
         const r = this.state.receipt;
-        if (!this.state.user || !r || this.state.screen !== 'receipt') return;
+        if (!this.state.user || !r || this.state.demo || this.state.screen !== 'receipt') return;
         if (!this.state.people.some((_, i) => this.totals(i).any)) return;
         const entry = this.historyEntry();
         const json = JSON.stringify(entry);
@@ -1481,6 +1526,7 @@ const App = {
         try {
             const saved = await API.getHistory(id);
             const p = saved.payload;
+            this.state.demo = false;
             this.state.receipt = {
                 id: p.id,
                 title: p.title,

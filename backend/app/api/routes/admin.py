@@ -181,6 +181,9 @@ def usage_panel(mes: Optional[str] = MONTH):
                WHERE name = 'install' AND created_at >= ? AND created_at < ? GROUP BY detail""", rng)}
         # Quem tocou em "Indicar a um amigo" e mandou o link
         invited = _distinct(conn, ev, ("invite", *rng))
+        # Conta de exemplo: quantos abriram e quantos marcaram algum item
+        dv = "SELECT device_hash FROM events WHERE name = 'demo' AND detail = ? AND created_at >= ? AND created_at < ?"
+        demo = {"started": _distinct(conn, dv, ("start", *rng)), "done": _distinct(conn, dv, ("done", *rng))}
         # De onde vieram (utm_source, ref ou anúncio da Meta), em aparelhos
         sources = {r["detail"]: r["n"] for r in conn.execute(
             """SELECT detail, COUNT(DISTINCT device_hash) AS n FROM events
@@ -215,6 +218,7 @@ def usage_panel(mes: Optional[str] = MONTH):
         "opened_from_qr": origin["qr"],
         "sources": sources,
         "invited": invited,
+        "demo": demo,
         "opened_installed": origin["installed"],
         "accounts": dict(accounts),
     }

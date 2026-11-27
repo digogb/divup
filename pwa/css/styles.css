@@ -788,7 +788,19 @@ html.casa-ativa::after {
     transform: translateY(-2px);
 }
 .theme-opt:active { transform: translateY(0); box-shadow: var(--sh-flat), var(--edge); }
-.home-history, .home-invite { align-self: center; }
+.home-history, .home-invite, .home-demo { align-self: center; }
+
+/* Conta de exemplo */
+.demo-note {
+    margin: 0 16px 8px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: var(--hl);
+    color: var(--on-hl);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+}
 
 .avatar {
     border-radius: 50%;

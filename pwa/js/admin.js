@@ -318,6 +318,7 @@ const Admin = {
             <div class="a-grid">
                 ${this.kpi('Vieram do QR de um bar', u.opened_from_qr, 'pessoas que abriram pelo QR')}
                 ${this.kpi('Vieram de um link', fromLinks, sourcesNote)}
+                ${this.kpi('Testaram o exemplo', u.demo?.started || 0, `${this.num(u.demo?.done || 0)} marcaram itens`)}
                 ${this.kpi('Indicaram o app', u.invited || 0, `${this.num((u.sources || {}).indicacao || 0)} chegaram pela indicação`)}
                 ${this.kpi('Usam o app instalado', u.opened_installed, 'abriram pela tela inicial')}
                 ${this.kpi('Convite de instalar', i.shown || 0, `${accepted} aceitaram · ${(i.closed || 0) + (i.refused || 0)} recusaram`)}
