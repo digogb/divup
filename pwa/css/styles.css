@@ -202,8 +202,14 @@ a.btn, a.btn-text { text-decoration: none; }
 }
 .mini-receipt-title { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: .04em; text-align: center; padding-bottom: 6px; }
 .mini-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; color: var(--muted); border-radius: 8px; }
-.mini-row.on { background: var(--soft); color: var(--soft-ink); font-weight: 600; }
+.mini-row.on, .mini-row.pick { background: var(--soft); color: var(--soft-ink); font-weight: 600; }
+.mini-row { position: relative; }
 .mini-row span:first-child { display: flex; align-items: center; gap: 6px; }
+.mini-check { display: inline-flex; width: 12px; font-style: normal; }
+/* "Sua parte": os valores se sobrepõem; sem animação fica só o último */
+.mini-amount { display: grid; justify-items: end; }
+.mini-amount span { grid-area: 1 / 1; }
+.mini-amount span:not(:last-child) { opacity: 0; }
 /* Canhoto: o rodapé "Sua parte" da notinha em amarelo */
 .mini-total { background: var(--hl); color: var(--on-hl); border-radius: 8px; margin-top: 8px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: baseline; }
 .mini-total strong { font-family: var(--font-display); font-size: 18px; }
@@ -677,12 +683,56 @@ a.btn, a.btn-text { text-decoration: none; }
 .btn-primary { box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 60%, #000), var(--sh-raised); }
 .btn-primary:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 60%, #000); }
 .btn-primary:disabled { box-shadow: none; }
-/* a pilha de recibos flutua devagar */
+/* A notinha do início mostra o app: um toque marca cada item e "Sua parte" sobe.
+   Ciclo de 8 s: Entrada (15%), Suco (35%), Café (55%), pausa, desmarca tudo (91%). */
 @media (prefers-reduced-motion: no-preference) {
-    .mini-receipt { animation: receipt-float 6s ease-in-out infinite; }
+    .mini-row.pick-1 { animation: mini-pick-1 8s infinite; }
+    .mini-row.pick-2 { animation: mini-pick-2 8s infinite; }
+    .mini-row.pick-3 { animation: mini-pick-3 8s infinite; }
+    .pick-1 .mini-check { animation: mini-check-1 8s infinite; }
+    .pick-2 .mini-check { animation: mini-check-2 8s infinite; }
+    .pick-3 .mini-check { animation: mini-check-3 8s infinite; }
+    .mini-row.pick::after {
+        content: ""; position: absolute; left: 45%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px;
+        border-radius: 50%; background: var(--soft-ink); opacity: 0; pointer-events: none;
+    }
+    .pick-1::after { animation: mini-tap-1 8s infinite; }
+    .pick-2::after { animation: mini-tap-2 8s infinite; }
+    .pick-3::after { animation: mini-tap-3 8s infinite; }
+    .mini-amount span:nth-child(1) { animation: mini-t0 8s infinite; }
+    .mini-amount span:nth-child(2) { animation: mini-t1 8s infinite; }
+    .mini-amount span:nth-child(3) { animation: mini-t2 8s infinite; }
+    .mini-amount span:nth-child(4) { animation: mini-t3 8s infinite; }
+    .mini-total { animation: mini-bump 8s infinite; }
 }
-@keyframes receipt-float {
-    50% { transform: perspective(900px) rotateX(10deg) rotateY(-10deg) rotateZ(-2deg) translateY(-6px); }
+@keyframes mini-pick-1 {
+    0%, 14% { background-color: transparent; color: var(--muted); }
+    16%, 89% { background-color: var(--soft); color: var(--soft-ink); }
+    93%, 100% { background-color: transparent; color: var(--muted); }
+}
+@keyframes mini-pick-2 {
+    0%, 34% { background-color: transparent; color: var(--muted); }
+    36%, 89% { background-color: var(--soft); color: var(--soft-ink); }
+    93%, 100% { background-color: transparent; color: var(--muted); }
+}
+@keyframes mini-pick-3 {
+    0%, 54% { background-color: transparent; color: var(--muted); }
+    56%, 89% { background-color: var(--soft); color: var(--soft-ink); }
+    93%, 100% { background-color: transparent; color: var(--muted); }
+}
+@keyframes mini-check-1 { 0%, 14% { opacity: 0; transform: scale(.3); } 17%, 89% { opacity: 1; transform: scale(1); } 93%, 100% { opacity: 0; transform: scale(.3); } }
+@keyframes mini-check-2 { 0%, 34% { opacity: 0; transform: scale(.3); } 37%, 89% { opacity: 1; transform: scale(1); } 93%, 100% { opacity: 0; transform: scale(.3); } }
+@keyframes mini-check-3 { 0%, 54% { opacity: 0; transform: scale(.3); } 57%, 89% { opacity: 1; transform: scale(1); } 93%, 100% { opacity: 0; transform: scale(.3); } }
+@keyframes mini-tap-1 { 0%, 12% { opacity: 0; transform: scale(.3); } 14% { opacity: .35; transform: scale(.5); } 21%, 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes mini-tap-2 { 0%, 32% { opacity: 0; transform: scale(.3); } 34% { opacity: .35; transform: scale(.5); } 41%, 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes mini-tap-3 { 0%, 52% { opacity: 0; transform: scale(.3); } 54% { opacity: .35; transform: scale(.5); } 61%, 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes mini-t0 { 0%, 14% { opacity: 1; } 16%, 90% { opacity: 0; } 93%, 100% { opacity: 1; } }
+@keyframes mini-t1 { 0%, 14% { opacity: 0; } 16%, 34% { opacity: 1; } 36%, 100% { opacity: 0; } }
+@keyframes mini-t2 { 0%, 34% { opacity: 0; } 36%, 54% { opacity: 1; } 56%, 100% { opacity: 0; } }
+@keyframes mini-t3 { 0%, 54% { opacity: 0; } 56%, 90% { opacity: 1; } 93%, 100% { opacity: 0; } }
+@keyframes mini-bump {
+    0%, 15% { transform: scale(1); } 17% { transform: scale(1.05); } 20%, 35% { transform: scale(1); }
+    37% { transform: scale(1.05); } 40%, 55% { transform: scale(1); } 57% { transform: scale(1.07); } 61%, 100% { transform: scale(1); }
 }
 
 /* Acento amarelo (sempre com texto escuro).

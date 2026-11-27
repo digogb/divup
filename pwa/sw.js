@@ -1,14 +1,14 @@
-const CACHE_NAME = 'divup-v24';
+const CACHE_NAME = 'divup-v25';
 const urlsToCache = [
     '/',
     '/index.html',
-    '/css/styles.css?v=24',
-    '/js/app.js?v=24',
-    '/js/api.js?v=24',
-    '/js/components.js?v=24',
-    '/js/theme.js?v=24',
-    '/assets/icons/icon-192.png?v=24',
-    '/assets/icons/icon.svg?v=24'
+    '/css/styles.css?v=25',
+    '/js/app.js?v=25',
+    '/js/api.js?v=25',
+    '/js/components.js?v=25',
+    '/js/theme.js?v=25',
+    '/assets/icons/icon-192.png?v=25',
+    '/assets/icons/icon.svg?v=25'
 ];
 
 // Install event - cache static assets

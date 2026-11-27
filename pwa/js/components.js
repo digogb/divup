@@ -117,12 +117,12 @@ const Components = {
                 ${summary ? this.homeSummary(summary) : `<div class="home-hero home-hero-demo" aria-hidden="true" data-action="demo">
                     <div class="mini-receipt">
                         <div class="mini-receipt-title">SUA CONTA</div>
-                        <div class="mini-row on"><span>${Icons.checkSmall}Entrada (÷ 2)</span><span>24,50</span></div>
-                        <div class="mini-row"><span>Prato do dia</span><span>42,00</span></div>
-                        <div class="mini-row on"><span>${Icons.checkSmall}Suco (1 de 2)</span><span>11,00</span></div>
-                        <div class="mini-row"><span>Sobremesa</span><span>16,00</span></div>
-                        <div class="mini-row on"><span>${Icons.checkSmall}Café</span><span>7,50</span></div>
-                        <div class="mini-total"><span>Sua parte</span><strong>R$ 47,30</strong></div>
+                        <div class="mini-row pick pick-1"><span><i class="mini-check">${Icons.checkSmall}</i>Entrada (÷ 2)</span><span>24,50</span></div>
+                        <div class="mini-row"><span><i class="mini-check"></i>Prato do dia</span><span>42,00</span></div>
+                        <div class="mini-row pick pick-2"><span><i class="mini-check">${Icons.checkSmall}</i>Suco (1 de 2)</span><span>11,00</span></div>
+                        <div class="mini-row"><span><i class="mini-check"></i>Sobremesa</span><span>16,00</span></div>
+                        <div class="mini-row pick pick-3"><span><i class="mini-check">${Icons.checkSmall}</i>Café</span><span>7,50</span></div>
+                        <div class="mini-total"><span>Sua parte</span><strong class="mini-amount"><span>R$ 0,00</span><span>R$ 26,95</span><span>R$ 39,05</span><span>R$ 47,30</span></strong></div>
                     </div>
                 </div>`}
 
