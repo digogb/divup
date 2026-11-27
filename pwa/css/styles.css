@@ -788,7 +788,27 @@ html.casa-ativa::after {
     transform: translateY(-2px);
 }
 .theme-opt:active { transform: translateY(0); box-shadow: var(--sh-flat), var(--edge); }
-.home-history, .home-invite, .home-demo { align-self: center; }
+.home-history, .home-invite { align-self: center; }
+
+/* Conta de exemplo: pílula acima do título; a notinha ilustrada também abre o exemplo */
+.home-hero-demo { cursor: pointer; }
+.demo-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    margin-bottom: 14px;
+    padding: 0 10px 0 16px;
+    border-radius: 999px;
+    background: var(--hl);
+    color: var(--on-hl);
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: 0 3px 0 color-mix(in srgb, var(--hl) 55%, #000), var(--sh-raised);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.demo-pill:active { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--hl) 55%, #000); }
+@media (prefers-reduced-motion: reduce) { .demo-pill { transition: none; } }
 
 /* Conta de exemplo */
 .demo-note {

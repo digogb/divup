@@ -114,7 +114,7 @@ const Components = {
 
                 ${install ? this.homeInstall(install) : ''}
 
-                ${summary ? this.homeSummary(summary) : `<div class="home-hero" aria-hidden="true">
+                ${summary ? this.homeSummary(summary) : `<div class="home-hero home-hero-demo" aria-hidden="true" data-action="demo">
                     <div class="mini-receipt">
                         <div class="mini-receipt-title">SUA CONTA</div>
                         <div class="mini-row on"><span>${Icons.checkSmall}Entrada (÷ 2)</span><span>24,50</span></div>
@@ -127,6 +127,7 @@ const Components = {
                 </div>`}
 
                 <div class="home-copy">
+                    ${!summary ? `<button class="demo-pill" data-action="demo">Testar com uma conta de exemplo${Icons.chevron}</button>` : ''}
                     <h1>Cada um paga o que consumiu.</h1>
                     <p>Fotografe a conta, toque nos seus itens e mande sua parte no grupo.</p>
                     ${casa ? `<p class="home-casa">Cortesia de <strong>${Fmt.esc(casa.name)}</strong> · leitura grátis</p>` : ''}
@@ -138,7 +139,6 @@ const Components = {
                     <button class="btn btn-primary" data-action="camera">${Icons.camera}Fotografar conta</button>
                     <button class="btn btn-secondary" data-action="gallery">${Icons.gallery}Escolher da galeria</button>
                     ${user && !summary ? `<button class="btn-text home-history" data-action="open-history">${Icons.history}Ver histórico</button>` : ''}
-                    ${!summary ? `<button class="btn-text home-demo" data-action="demo">${Icons.checkCircle}Testar com uma conta de exemplo</button>` : ''}
                     <button class="btn-text home-invite" data-action="invite">${Icons.share}Indicar a um amigo</button>
                 </div>
             </main>
