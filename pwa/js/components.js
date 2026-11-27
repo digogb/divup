@@ -138,6 +138,7 @@ const Components = {
                     <button class="btn btn-primary" data-action="camera">${Icons.camera}Fotografar conta</button>
                     <button class="btn btn-secondary" data-action="gallery">${Icons.gallery}Escolher da galeria</button>
                     ${user && !summary ? `<button class="btn-text home-history" data-action="open-history">${Icons.history}Ver histórico</button>` : ''}
+                    <button class="btn-text home-invite" data-action="invite">${Icons.share}Indicar a um amigo</button>
                 </div>
             </main>
             <div id="sheetRoot"></div>

@@ -11,6 +11,11 @@ def test_usage_panel_counts_funnel_distribution_and_events():
     for d in ("a", "b", "c"):
         usage.record_event("open", d)
     usage.record_event("open", "a", standalone=True)
+    usage.record_event("open", "a", detail="conta")
+    usage.record_event("open", "b", detail="meta")
+    usage.record_event("open", "c", detail="meta")
+    usage.record_event("invite", "a", detail="native")
+    usage.record_event("invite", "a", detail="native")
     for _ in range(5):
         read("a")
     read("b", ms=4000)
@@ -31,6 +36,8 @@ def test_usage_panel_counts_funnel_distribution_and_events():
     assert p["shares"] == {"whatsapp-one": 1}
     assert p["install"] == {"shown": 1, "accepted": 1}
     assert p["opened_installed"] == 1
+    assert p["sources"] == {"meta": 2, "conta": 1}
+    assert p["invited"] == 1
     today = p["daily"][-1]
     assert today["opens"] == 3 and today["reads_ok"] == 6 and today["reads_failed"] == 1 and today["blocked"] == 1
 

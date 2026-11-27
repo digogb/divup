@@ -1,5 +1,6 @@
 """
-Eventos anônimos do app para o painel de uso: abriu, enviou a parte, convite de instalar.
+Eventos anônimos do app para o painel de uso: abriu, enviou a parte, convite de instalar,
+indicou o app a um amigo.
 
 Sem login. O aparelho vira hash com segredo, como nas leituras. Um teto por IP
 por hora evita que alguém encha a tabela.
@@ -20,7 +21,7 @@ _window: dict[str, list] = defaultdict(lambda: [0.0, 0])  # ip_hash -> [início 
 
 
 class Event(BaseModel):
-    name: Literal["open", "share", "install"]
+    name: Literal["open", "share", "install", "invite"]
     device_id: Optional[str] = Field(default=None, max_length=64)
     casa: Optional[str] = Field(default=None, max_length=40)
     standalone: bool = False

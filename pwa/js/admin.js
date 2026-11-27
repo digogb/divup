@@ -307,10 +307,18 @@ const Admin = {
 
     originView(u) {
         const i = u.install;
+        const names = { conta: 'texto da divisão', indicacao: 'indicação', meta: 'anúncio Meta', instagram: 'Instagram', whatsapp: 'WhatsApp' };
+        const sources = Object.entries(u.sources || {});
+        const fromLinks = sources.reduce((a, [, n]) => a + n, 0);
+        const sourcesNote = sources.length
+            ? sources.slice(0, 4).map(([k, n]) => `${Fmt.esc(names[k] || k)} ${this.num(n)}`).join(' · ')
+            : 'nenhum link com origem ainda';
         const accepted = (i.accepted || 0) + (i.ios_ok || 0);
         return `
             <div class="a-grid">
                 ${this.kpi('Vieram do QR de um bar', u.opened_from_qr, 'pessoas que abriram pelo QR')}
+                ${this.kpi('Vieram de um link', fromLinks, sourcesNote)}
+                ${this.kpi('Indicaram o app', u.invited || 0, `${this.num((u.sources || {}).indicacao || 0)} chegaram pela indicação`)}
                 ${this.kpi('Usam o app instalado', u.opened_installed, 'abriram pela tela inicial')}
                 ${this.kpi('Convite de instalar', i.shown || 0, `${accepted} aceitaram · ${(i.closed || 0) + (i.refused || 0)} recusaram`)}
                 ${this.kpi('Novas contas Google', u.accounts.new_users, `${this.num(u.accounts.users)} no total · ${this.plural(u.accounts.saved, 'conta salva', 'contas salvas')} no histórico`)}

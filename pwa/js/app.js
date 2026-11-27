@@ -13,6 +13,8 @@ const ME = 'Você';
 /** Nomes que querem dizer "eu" (quem está com o celular). */
 const isSelf = (name) => /^(voc[eê]|eu)$/i.test(String(name || '').trim());
 const CASA_HOURS = 6;      // quanto tempo vale o QR Code do bar depois de lido
+const SHARE_URL = 'https://divup.rglabs.tech/?utm_source=conta';  // link no fim do texto enviado
+const INVITE_URL = 'https://divup.rglabs.tech/?utm_source=indicacao';  // botão "Indicar a um amigo"
 const INSTALL_KEY = 'divup.install'; // 'installed' | 'dismissed': o convite para instalar não volta
 const STORAGE = {
     get(key, fallback) {
@@ -62,8 +64,8 @@ const App = {
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') this.saveToHistory({ keepalive: true });
         });
-        // Abriu o app (com o código do bar, se veio do QR da mesa)
-        API.track('open', '', new URLSearchParams(location.search).get('casa'));
+        // Abriu o app (com o código do bar, se veio do QR da mesa, e a origem do link)
+        API.track('open', this.captureOrigin(), new URLSearchParams(location.search).get('casa'));
         this.captureCasa();
         this.setupInstall();
         this.render();
@@ -74,6 +76,23 @@ const App = {
      * QR Code da mesa (?casa=<código>): guarda o bar por 6 horas e limpa a URL,
      * para que um link salvo ou a PWA instalada não leve o código a outro bar.
      */
+    /**
+     * De onde a pessoa veio: ?utm_source=meta, ?ref=..., ou o fbclid que a Meta
+     * põe nos anúncios. Tira esses parâmetros da URL para um link salvo ou a PWA
+     * instalada não contarem a mesma origem de novo.
+     */
+    captureOrigin() {
+        const params = new URLSearchParams(location.search);
+        const raw = params.get('utm_source') || params.get('ref') || (params.has('fbclid') ? 'meta' : '');
+        const keys = [...params.keys()].filter(k => k.startsWith('utm_') || k === 'ref' || k === 'fbclid');
+        if (keys.length) {
+            keys.forEach(k => params.delete(k));
+            const query = params.toString();
+            history.replaceState(null, '', location.pathname + (query ? `?${query}` : '') + location.hash);
+        }
+        return raw.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
+    },
+
     captureCasa() {
         const params = new URLSearchParams(location.search);
         const slug = params.get('casa');
@@ -554,6 +573,7 @@ const App = {
             case 'open-theme': this.openSheet({ type: 'theme' }); break;
             case 'set-theme': this.setTheme(el.dataset.pref); break;
             case 'open-history': this.openHistory(); break;
+            case 'invite': this.invite(); break;
             case 'go-home': this.go('home'); break;
             case 'open-saved': this.openSaved(id); break;
             case 'delete-saved': this.deleteSaved(id); break;
@@ -1173,6 +1193,8 @@ const App = {
         const pixKey = (this.$('#pixKey')?.value ?? STORAGE.get('divup.pixKey', '')).trim();
         const pixOn = this.$('#pixToggle')?.checked ?? STORAGE.get('divup.pixOn', '0') === '1';
         if (pixOn && pixKey) text += `\n\nPix: ${clean(pixKey)}`;
+        // Quem recebe a divisão conhece o app por aqui
+        text += `\n\nDividido com o DivUp: ${SHARE_URL}`;
         return text;
     },
 
@@ -1199,6 +1221,25 @@ const App = {
             ta.remove();
         }
         this.toast('Texto copiado');
+    },
+
+    /**
+     * "Indicar a um amigo": compartilhar do celular ou, sem ele, WhatsApp.
+     * O link vai dentro do texto, porque alguns apps descartam o texto quando há url.
+     */
+    async invite() {
+        const text = `Uso o DivUp pra dividir conta de bar: tira foto da nota e cada um vê quanto deu, sem cadastro. ${INVITE_URL}`;
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: 'DivUp', text });
+                API.track('invite', 'native');
+            } catch (err) {
+                if (err.name !== 'AbortError') this.toast('Não foi possível compartilhar');
+            }
+            return;
+        }
+        API.track('invite', 'whatsapp');
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
     },
 
     async shareNative() {

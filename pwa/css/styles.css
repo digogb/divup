@@ -788,7 +788,7 @@ html.casa-ativa::after {
     transform: translateY(-2px);
 }
 .theme-opt:active { transform: translateY(0); box-shadow: var(--sh-flat), var(--edge); }
-.home-history { align-self: center; }
+.home-history, .home-invite { align-self: center; }
 
 .avatar {
     border-radius: 50%;

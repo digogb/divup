@@ -56,6 +56,7 @@
 .a-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .a-grid .a-card { gap: 4px; }
 .a-grid .a-value { font-size: 22px; }
+.a-grid > .a-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
 .a-bar { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
 .a-bar span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
